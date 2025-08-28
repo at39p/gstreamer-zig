@@ -6,8 +6,8 @@ pub const c = @cImport({
     @cInclude("glib-object.h");
 });
 
-pub fn init(argc: ?*c_int, argv: ?*[*:null]?[*:0]u8) bool {
-    return c.gst_init_check(argc, argv, null);
+pub fn init(argc: ?*c_int, argv: ?*?*?*c_char) void {
+    c.gst_init(argc, argv);
 }
 
 pub fn deinit() void {
