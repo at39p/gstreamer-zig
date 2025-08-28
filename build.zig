@@ -4,10 +4,9 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Option to specify custom PKG_CONFIG_PATH
     const pkg_config_path = b.option([]const u8, "pkg_config_path", "Custom PKG_CONFIG_PATH for GStreamer");
 
-    _ = b.addModule("gstreamer", .{
+    const gstreamer_module = b.addModule("gstreamer", .{
         .root_source_file = b.path("src/gstreamer.zig"),
         .target = target,
         .optimize = optimize,
@@ -23,21 +22,32 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    // Set PKG_CONFIG_PATH if provided
-    if (pkg_config_path) |path| {
-        var arena = std.heap.ArenaAllocator.init(b.allocator);
-        defer arena.deinit();
-        const allocator = arena.allocator();
+    lib.linkLibC();
 
-        var env_map = std.process.getEnvMap(allocator) catch |err| {
-            std.debug.panic("Failed to get environment: {}", .{err});
-        };
-        env_map.put("PKG_CONFIG_PATH", path) catch |err| {
-            std.debug.panic("Failed to set PKG_CONFIG_PATH: {}", .{err});
-        };
+    // If custom pkg_config_path is provided, derive include paths
+    if (pkg_config_path) |path| {
+        // Remove /lib/pkgconfig suffix and add include paths
+        const framework_base = if (std.mem.endsWith(u8, path, "/lib/pkgconfig"))
+            path[0 .. path.len - "/lib/pkgconfig".len]
+        else
+            path;
+
+        const gst_include = b.fmt("{s}/include/gstreamer-1.0", .{framework_base});
+        const glib_include = b.fmt("{s}/include/glib-2.0", .{framework_base});
+        const glib_config_include = b.fmt("{s}/lib/glib-2.0/include", .{framework_base});
+        const base_include = b.fmt("{s}/include", .{framework_base});
+
+        gstreamer_module.addIncludePath(.{ .cwd_relative = gst_include });
+        gstreamer_module.addIncludePath(.{ .cwd_relative = glib_include });
+        gstreamer_module.addIncludePath(.{ .cwd_relative = glib_config_include });
+        gstreamer_module.addIncludePath(.{ .cwd_relative = base_include });
+
+        lib.addIncludePath(.{ .cwd_relative = gst_include });
+        lib.addIncludePath(.{ .cwd_relative = glib_include });
+        lib.addIncludePath(.{ .cwd_relative = glib_config_include });
+        lib.addIncludePath(.{ .cwd_relative = base_include });
     }
 
-    lib.linkLibC();
     lib.linkSystemLibrary2("gstreamer-1.0", .{ .use_pkg_config = .force });
     lib.linkSystemLibrary2("glib-2.0", .{ .use_pkg_config = .force });
     lib.linkSystemLibrary2("gobject-2.0", .{ .use_pkg_config = .force });
