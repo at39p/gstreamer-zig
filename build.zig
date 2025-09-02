@@ -22,8 +22,6 @@ fn addGStreamerDeps(step: anytype, pkg_config_path: ?[]const u8, b: *std.Build) 
     step.addIncludePath(.{ .cwd_relative = glib_config_include });
     step.addIncludePath(.{ .cwd_relative = base_include });
 
-    step.addIncludePath(b.path("c"));
-
     // Only link libraries for compile steps
     if (T == *std.Build.Step.Compile) {
         step.linkLibC();
