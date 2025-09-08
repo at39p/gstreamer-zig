@@ -3,6 +3,7 @@ const core = @import("core.zig");
 
 pub const c = core.c;
 pub const GstCaps = core.GstCaps;
+
 pub const Fraction = core.Fraction;
 
 pub const Caps = struct {
@@ -104,8 +105,8 @@ pub const Caps = struct {
         return c.gst_caps_get_structure(self.ptr, @intCast(index));
     }
 
-    pub fn builder(media_type: [*:0]const u8) !CapsBuilder {
-        return CapsBuilder.init(media_type);
+    pub fn builder(media_type: [*:0]const u8) CapsBuilder {
+        return CapsBuilder.init(media_type) catch unreachable;
     }
 };
 

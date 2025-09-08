@@ -95,8 +95,6 @@ pub const MainLoop = struct {
     }
 };
 
-/// Represents a fraction (rational number) used in GStreamer for frame rates, aspect ratios, etc.
-/// TODO: It's probably not rightly placed.
 pub const Fraction = struct {
     numerator: i32,
     denominator: i32,

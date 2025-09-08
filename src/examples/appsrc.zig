@@ -51,6 +51,12 @@ fn createAndRun() !void {
     const pipeline = try gst.Pipeline.init("test-appsrc");
     defer pipeline.deinit();
 
+    // TODO: Add videoinfo here
+    // var videoInfo = try gst.VideoInfo.new();
+    // defer videoInfo.deinit();
+    //
+    // videoInfo.setFormat(gst.VideoFormat.rgbx, 1920, 1080);
+
     var appsrc = try gst.AppSrc.init("source");
     defer appsrc.deinit();
 
@@ -59,7 +65,12 @@ fn createAndRun() !void {
     appsrc.setStreamType(.stream);
     appsrc.setFormat(.time);
 
-    const caps = try gst.Caps.fromString("video/x-raw,format=RGB,width=320,height=240,framerate=30/1");
+    const caps = gst.Caps.builder("video/x-raw")
+        .field("format", "RGB")
+        .field("width", 320)
+        .field("height", 240)
+        .field("framerate", gst.Fraction.new(30, 1))
+        .build();
     defer caps.deinit();
     appsrc.setCaps(caps);
 
