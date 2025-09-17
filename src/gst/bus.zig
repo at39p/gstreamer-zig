@@ -85,7 +85,6 @@ pub const Bus = struct {
             }
         };
         const result = c.gst_bus_add_watch(self.ptr, Wrapper.callback, @ptrCast(@constCast(func)));
-
         if (result == 0) {
             return error.AddWatchToBusFailed;
         }

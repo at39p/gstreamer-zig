@@ -1,0 +1,180 @@
+const std = @import("std");
+const gst = @import("gst");
+
+const contextData = struct {
+    queue: gst.Element,
+};
+
+fn createAndRun() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    try gst.init_check(null, null);
+    defer gst.deinit();
+
+    const pipeline = try gst.Pipeline.init("srt-transmuxer");
+    defer pipeline.deinit();
+
+    // Create elements
+    const source = try gst.Element.factory("srtsrc")
+        .property("uri", "srt://127.0.0.1:7001?mode=caller&latency=20&buffer-size=8192")
+        .build();
+
+    var queues = std.array_list.Managed(gst.Element).init(allocator);
+    defer queues.deinit();
+
+    for (0..4) |i| {
+        const queueName = try std.fmt.allocPrintSentinel(allocator, "queue{d}", .{i}, 0);
+        defer allocator.free(queueName);
+
+        const queue = try gst.Element.factory("queue")
+            .name(queueName)
+            .property("max-size-time", 1000000)
+            .property("max-size-buffers", 30)
+            .property("leaky", "downstream")
+            .build();
+
+        try queues.append(queue);
+    }
+
+    try pipeline.addMany(queues.items);
+
+    for (queues.items) |q| {
+        if (q.getName()) |name| {
+            std.debug.print("{s}\n", .{name});
+        } else {
+            std.debug.print("(unnamed element)\n", .{});
+        }
+    }
+
+    const demuxer = try gst.Element.init("tsdemux", "demuxer");
+    const parse = try gst.Element.init("h264parse", "parser");
+
+    const payloader = try gst.Element.factory("rtph264pay")
+        .name("payloader")
+        .property("config-interval", 1)
+        .build();
+
+    const sink = try gst.Element.factory("udpsink")
+        .name("sink")
+        .property("host", "127.0.0.1")
+        .property("port", 5000)
+        .property("sync", false)
+        .property("async", false)
+        .property("max-lateness", -1)
+        .build();
+
+    try pipeline.addMany(&[_]gst.Element{ source, demuxer, parse, payloader, sink });
+
+    var context = contextData{
+        .queue = queues.items[1],
+    };
+
+    _ = demuxer.connect("pad-added", pad_added_handler, &context);
+
+    // Link static elements up to demuxer
+    try source.link(queues.items[0]);
+    try queues.items[0].link(demuxer);
+
+    // Link elements after demuxer (will be connected via pad-added callback)
+    try queues.items[1].linkMany(&[_]gst.Element{ parse, queues.items[2], payloader, queues.items[3], sink });
+
+    try pipeline.start();
+
+    const bus = try pipeline.getBus();
+    defer bus.deinit();
+
+    // Wait for EOS or error
+    var running = true;
+    std.debug.print("Starting message loop...\n", .{});
+
+    while (running) {
+        const msg = bus.popMessage(std.time.ns_per_ms * 100, .any);
+        if (msg) |message| {
+            defer message.deinit();
+
+            const msg_type = message.getType();
+            std.debug.print("Received message: {}\n", .{msg_type});
+
+            switch (msg_type) {
+                .eos => {
+                    std.debug.print("End of stream reached\n", .{});
+                    running = false;
+                },
+                .err => {
+                    const is_quit = message.parseErrorAndPrint() catch {
+                        std.debug.print("Unknown error occurred\n", .{});
+                        running = false;
+                        continue;
+                    };
+                    if (is_quit) {
+                        std.debug.print("Gracefully shutting down...\n", .{});
+                    }
+                    running = false;
+                },
+                .warning => {
+                    std.debug.print("Warning message received\n", .{});
+                },
+                .state_changed => {
+                    std.debug.print("State changed message received\n", .{});
+                },
+                .info => {
+                    std.debug.print("Info message received\n", .{});
+                },
+                else => {
+                    std.debug.print("Other message type: {}\n", .{msg_type});
+                },
+            }
+        } else {
+            std.debug.print(".", .{});
+        }
+
+        // Add a small delay to prevent busy waiting
+        std.Thread.sleep(std.time.ns_per_ms * 10);
+    }
+
+    // Cleanup
+    std.debug.print("Stopping pipeline...\n", .{});
+    std.debug.print("Pipeline stopped and cleaned up\n", .{});
+
+    _ = pipeline.setState(.null_state);
+}
+
+fn pad_added_handler(element: gst.Element, new_pad: gst.Pad, user_data: ?*anyopaque) void {
+    std.debug.print("Pad added callback triggered!\n", .{});
+
+    if (element.getName()) |elementName| {
+        std.debug.print("element: {s}\n", .{elementName});
+    }
+
+    const name = new_pad.getName() orelse return;
+
+    if (!std.mem.startsWith(u8, name, "video_")) return;
+
+    const data = user_data orelse return;
+    const context: *contextData = @ptrCast(@alignCast(data));
+
+    const sink_pad = context.queue.getStaticPad("sink") orelse return;
+    defer sink_pad.deinit();
+
+    new_pad.link(sink_pad) catch |err| {
+        std.debug.print("Failed to link {s} to queue: {}\n", .{ name, err });
+        return;
+    };
+
+    std.debug.print("Successfully linked {s} to queue\n", .{name});
+}
+
+fn run(_: ?*anyopaque) callconv(.c) c_int {
+    createAndRun() catch |err| {
+        std.debug.print("Pipeline error: {}\n", .{err});
+        return -1;
+    };
+
+    return 0;
+}
+
+pub fn main() !void {
+    try gst.macosMainSimple(run, null);
+}

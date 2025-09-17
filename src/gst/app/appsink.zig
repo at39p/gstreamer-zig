@@ -129,7 +129,7 @@ pub const AppSink = struct {
 
         fn eosWrapper(gst_element: ?*anyopaque, context: ?*anyopaque) callconv(.c) void {
             if (context) |ctx| {
-                const callback_ctx: *CallbackContext = @alignCast(@ptrCast(ctx));
+                const callback_ctx: *CallbackContext = @ptrCast(@alignCast(ctx));
                 if (callback_ctx.eos_func) |func| {
                     func(callback_ctx.app_sink, callback_ctx.user_data);
                 }
@@ -139,7 +139,7 @@ pub const AppSink = struct {
 
         fn newPrerollWrapper(gst_element: ?*anyopaque, context: ?*anyopaque) callconv(.c) c_int {
             if (context) |ctx| {
-                const callback_ctx: *CallbackContext = @alignCast(@ptrCast(ctx));
+                const callback_ctx: *CallbackContext = @ptrCast(@alignCast(ctx));
                 if (callback_ctx.new_preroll_func) |func| {
                     func(callback_ctx.app_sink, callback_ctx.user_data);
                 }
@@ -150,7 +150,7 @@ pub const AppSink = struct {
 
         fn newSampleWrapper(gst_element: ?*anyopaque, context: ?*anyopaque) callconv(.c) c_int {
             if (context) |ctx| {
-                const callback_ctx: *CallbackContext = @alignCast(@ptrCast(ctx));
+                const callback_ctx: *CallbackContext = @ptrCast(@alignCast(ctx));
                 if (callback_ctx.new_sample_func) |func| {
                     func(callback_ctx.app_sink, callback_ctx.user_data);
                 }

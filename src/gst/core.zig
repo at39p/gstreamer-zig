@@ -17,6 +17,8 @@ pub const GstCaps = *c.GstCaps;
 pub const GstPad = *c.GstPad;
 pub const GstSample = *c.GstSample;
 pub const GstStructure = *c.GstStructure;
+pub const GstStream = *c.GstStream;
+pub const GstStreamCollection = *c.GstStreamCollection;
 
 pub const State = enum(c_int) {
     void_pending = c.GST_STATE_VOID_PENDING,

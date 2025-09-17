@@ -13,10 +13,17 @@ pub const properties = @import("gst/properties.zig");
 pub const sample = @import("gst/sample.zig");
 pub const buffer = @import("gst/buffer.zig");
 pub const pad = @import("gst/pad.zig");
+pub const stream = @import("gst/stream.zig");
 
 /// App
 pub const appsink = @import("gst/app/appsink.zig");
 pub const appsrc = @import("gst/app/appsrc.zig");
+
+// Video
+pub const video = @import("gst/video/video.zig");
+pub const videoinfo = @import("gst/video/videoinfo.zig");
+pub const videoformat = @import("gst/video/videoformat.zig");
+pub const videoformatinfo = @import("gst/video/videoformatinfo.zig");
 
 pub const GstElement = core.GstElement;
 pub const Element = element.Element;
@@ -34,6 +41,8 @@ pub const Caps = caps.Caps;
 pub const CapsBuilder = caps.CapsBuilder;
 pub const Fraction = caps.Fraction;
 pub const Pad = pad.Pad;
+pub const Stream = stream.Stream;
+pub const StreamCollection = stream.StreamCollection;
 
 pub const AppSink = appsink.AppSink;
 pub const AppSrc = appsrc.AppSrc;
@@ -50,8 +59,6 @@ pub const GStreamerError = errors.GStreamerError;
 pub const init = core.init;
 pub const init_check = core.init_check;
 pub const deinit = core.deinit;
-pub const version = core.version;
-pub const versionString = core.versionString;
 
 // Element functions
 pub const getState = Element.getState;
@@ -59,7 +66,6 @@ pub const setProperty = Element.setProperty;
 pub const link = Element.link;
 
 // Bus functions
-pub const getBus = bus.getBus;
 pub const busTimedPopFiltered = Bus.popMessage;
 pub const messageGetType = Message.getType;
 pub const parseError = Message.parseErrorAndPrint;
@@ -72,7 +78,8 @@ pub const macosMainSimple = core.macosMainSimple;
 
 // GLib MainLoop functions
 pub const MainLoop = core.MainLoop;
-pub const mainLoopNew = core.mainLoopNew;
-pub const mainLoopRun = core.mainLoopRun;
-pub const mainLoopQuit = core.mainLoopQuit;
-pub const mainLoopUnref = core.mainLoopUnref;
+
+// gst/video/video.h:
+pub const VideoInfo = videoinfo.VideoInfo;
+pub const VideoFormat = videoformat.VideoFormat;
+pub const VideoFormatInfo = videoformatinfo.VideoFormatInfo;

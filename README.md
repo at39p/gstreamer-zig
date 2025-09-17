@@ -61,27 +61,4 @@ exe.root_module.addImport("gstreamer", gstreamer.module("gstreamer"));
 zig build
 ```
 
-## Testing
 
-```bash
-zig build test
-```
-
-## Development Setup
-
-For proper LSP support in your editor, ensure the `PKG_CONFIG_PATH` environment variable is set (see platform-specific instructions above).
-
-### Using direnv (recommended)
-Create a `.envrc` file in your project root:
-```bash
-# macOS Homebrew
-export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
-
-# or macOS Framework
-export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig:$PKG_CONFIG_PATH"
-```
-
-Then run:
-```bash
-direnv allow
-```

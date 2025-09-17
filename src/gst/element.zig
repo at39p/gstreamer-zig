@@ -248,7 +248,7 @@ pub const ElementFactory = struct {
     pub fn init(factory_name: [*:0]const u8) ElementFactory {
         return .{
             .factory_name = factory_name,
-            .element_name = undefined,
+            .element_name = factory_name, // If no name was provided, just use factory_name
             .properties = std.array_list.Managed(Property).init(std.heap.page_allocator),
             .allocator = std.heap.page_allocator,
         };
