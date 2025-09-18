@@ -90,17 +90,17 @@ pub const AppSrc = struct {
         c.g_object_set(self.el.ptr, "emit-signals", @as(c_int, if (emit) 1 else 0), @as(?*anyopaque, null));
     }
 
-    pub fn setCallbacks(self: AppSrc, callbacks: AppSrcCallbacks) !void {
+    pub fn setCallbacks(self: AppSrc, callbacks: AppSrcCallbacks, user_data: ?*anyopaque) !void {
         if (callbacks.need_data_wrapper) |wrapper| {
-            const handler_id = c.g_signal_connect_data(self.el.ptr, "need-data", @ptrCast(wrapper), self.el.ptr, null, 0);
+            const handler_id = c.g_signal_connect_data(self.el.ptr, "need-data", @ptrCast(wrapper), user_data, null, 0);
             if (handler_id == 0) return error.SignalConnectionFailed;
         }
         if (callbacks.enough_data_wrapper) |wrapper| {
-            const handler_id = c.g_signal_connect_data(self.el.ptr, "enough-data", @ptrCast(wrapper), self.el.ptr, null, 0);
+            const handler_id = c.g_signal_connect_data(self.el.ptr, "enough-data", @ptrCast(wrapper), user_data, null, 0);
             if (handler_id == 0) return error.SignalConnectionFailed;
         }
         if (callbacks.seek_data_wrapper) |wrapper| {
-            const handler_id = c.g_signal_connect_data(self.el.ptr, "seek-data", @ptrCast(wrapper), self.el.ptr, null, 0);
+            const handler_id = c.g_signal_connect_data(self.el.ptr, "seek-data", @ptrCast(wrapper), user_data, null, 0);
             if (handler_id == 0) return error.SignalConnectionFailed;
         }
     }
@@ -128,9 +128,9 @@ pub const AppSrc = struct {
                 var result = self;
 
                 const wrapper = struct {
-                    fn needDataWrapper(_: ?*anyopaque, length: c_uint, user_data: ?*anyopaque) callconv(.c) void {
-                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(user_data.?)) } };
-                        callback_fn(&appsrc, length, null);
+                    fn needDataWrapper(appsrc_ptr: ?*anyopaque, length: c_uint, user_data: ?*anyopaque) callconv(.c) void {
+                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
+                        callback_fn(&appsrc, length, user_data);
                     }
                 }.needDataWrapper;
 
@@ -143,8 +143,9 @@ pub const AppSrc = struct {
                 var result = self;
 
                 const wrapper = struct {
-                    fn enoughDataWrapper(_: ?*anyopaque, user_data: ?*anyopaque) callconv(.c) void {
-                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(user_data.?)) } };
+                    fn enoughDataWrapper(appsrc_ptr: ?*anyopaque, user_data: ?*anyopaque) callconv(.c) void {
+                        _ = user_data;
+                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
                         callback_fn(&appsrc);
                     }
                 }.enoughDataWrapper;
@@ -158,8 +159,9 @@ pub const AppSrc = struct {
                 var result = self;
 
                 const wrapper = struct {
-                    fn seekDataWrapper(_: ?*anyopaque, offset: c_ulong, user_data: ?*anyopaque) callconv(.c) c_int {
-                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(user_data.?)) } };
+                    fn seekDataWrapper(appsrc_ptr: ?*anyopaque, offset: c_ulong, user_data: ?*anyopaque) callconv(.c) c_int {
+                        _ = user_data;
+                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
                         return if (callback_fn(&appsrc, offset)) 1 else 0;
                     }
                 }.seekDataWrapper;

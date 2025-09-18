@@ -41,7 +41,7 @@ pub const VideoInfo = struct {
     }
 
     pub fn setFormat(self: *VideoInfo, format: videoFormat.VideoFormat, width: u32, height: u32) !void {
-        const success = c_video.gst_video_info_set_format(self.ptr, format, width, height);
+        const success = c_video.gst_video_info_set_format(self.ptr, @intFromEnum(format), width, height);
         if (success == 0) {
             return error.SetFormatFailed;
         }
@@ -52,6 +52,11 @@ pub const VideoInfo = struct {
         if (success == 0) {
             return error.SetInterlacedFormatFailed;
         }
+    }
+
+    pub fn setFPS(self: *VideoInfo, fraction: core.Fraction) void {
+        self.ptr.fps_d = fraction.denominator;
+        self.ptr.fps_n = fraction.numerator;
     }
 
     pub fn fromCaps(self: *VideoInfo, cs: caps.Caps) !void {
@@ -66,7 +71,7 @@ pub const VideoInfo = struct {
         if (ptr == null) {
             return error.ToCapsFailed;
         }
-        return caps.Caps{ .ptr = ptr };
+        return caps.Caps{ .ptr = @ptrCast(ptr) };
     }
 
     pub fn isEqual(self: VideoInfo, other: VideoInfo) bool {

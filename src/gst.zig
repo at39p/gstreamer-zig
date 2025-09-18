@@ -24,6 +24,7 @@ pub const video = @import("gst/video/video.zig");
 pub const videoinfo = @import("gst/video/videoinfo.zig");
 pub const videoformat = @import("gst/video/videoformat.zig");
 pub const videoformatinfo = @import("gst/video/videoformatinfo.zig");
+pub const videoframe = @import("gst/video/videoframe.zig");
 
 pub const GstElement = core.GstElement;
 pub const Element = element.Element;
@@ -83,3 +84,5 @@ pub const MainLoop = core.MainLoop;
 pub const VideoInfo = videoinfo.VideoInfo;
 pub const VideoFormat = videoformat.VideoFormat;
 pub const VideoFormatInfo = videoformatinfo.VideoFormatInfo;
+pub const VideoFrame = videoframe.VideoFrame;
+pub const VideoFrameFlags = videoframe.VideoFrameFlags;
