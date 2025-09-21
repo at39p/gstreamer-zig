@@ -3,45 +3,78 @@ const gst = @import("gst");
 
 var frame_count: u64 = 0;
 
+const contextData = struct {
+    video_info: gst.VideoInfo,
+};
+
 fn onNeedData(appsrc: *gst.AppSrc, length: u32, user_data: ?*anyopaque) void {
-    _ = user_data;
     _ = length;
 
-    // Create a buffer for RGB video (320x240x3 = 230,400 bytes)
-    const buffer_size = 320 * 240 * 3;
-    const buffer = gst.Buffer.init(buffer_size);
+    const data = user_data orelse return;
+    const context: *contextData = @ptrCast(@alignCast(data));
+
+    if (frame_count == 100) {
+        appsrc.endOfStream() catch |err| {
+            std.debug.print("Failed to send EOS: {}\n", .{err});
+        };
+        return;
+    }
+
+    std.debug.print("producing frame {d}\n", .{frame_count});
+
+    const r: u8 = if (frame_count % 2 == 0) 0 else 255;
+    const g: u8 = if (frame_count % 3 == 0) 0 else 255;
+    const b: u8 = if (frame_count % 5 == 0) 0 else 255;
+
+    const buffer = gst.Buffer.init(context.video_info.getSize());
     if (buffer) |buf| {
-        // Set timestamps
-        const timestamp = frame_count * 33333333; // ~30 FPS
-        buf.setPts(timestamp);
-        buf.setDts(timestamp);
+        buf.setPts(frame_count * 500 * 1000000); // 500ms in nanoseconds (GST_MSECOND equivalent) // TODO: Use GST_MSECOND
 
-        // Fill buffer with RGB test pattern
-        var map_info = buf.mapWrite();
-        if (map_info) |*info| {
-            defer info.deinit();
+        var vframe = gst.VideoFrame.fromBufferWritable(buf, context.video_info) catch |err| {
+            std.debug.print("Failed to create video frame: {}\n", .{err});
+            return;
+        };
+        defer vframe.deinit();
 
-            // Create a simple test pattern: cycling colors
-            const pixels = info.size / 3;
-            for (0..pixels) |i| {
-                const pixel_idx = i * 3;
-                const x = i % 320;
-                const y = i / 320;
+        const width = vframe.getWidth();
+        const height = vframe.getHeight();
 
-                // Create color pattern based on position and frame
-                info.data[pixel_idx + 0] = @intCast((x + frame_count) % 256); // Red
-                info.data[pixel_idx + 1] = @intCast((y + frame_count / 2) % 256); // Green
-                info.data[pixel_idx + 2] = @intCast((frame_count * 2) % 256); // Blue
+        const stride = vframe.planeStride(0) catch |err| {
+            std.debug.print("Failed to get plane stride: {}\n", .{err});
+            return;
+        };
+        const plane_data = vframe.planeData(0) catch |err| {
+            std.debug.print("Failed to get plane data: {}\n", .{err});
+            return;
+        };
+
+        // Iterate over each line of the frame
+        var y: u32 = 0;
+        while (y < height) : (y += 1) {
+            const line_offset = y * @as(u32, @intCast(stride));
+            const line_end = @min(line_offset + (4 * width), @as(u32, @intCast(plane_data.len)));
+
+            if (line_offset >= plane_data.len) break;
+
+            const line = plane_data[line_offset..line_end];
+
+            // Iterate over each pixel of 4 bytes in that line
+            var x: u32 = 0;
+            while (x < width and (x * 4 + 3) < line.len) : (x += 1) {
+                const pixel_offset = x * 4;
+                line[pixel_offset + 0] = b; // Blue
+                line[pixel_offset + 1] = g; // Green
+                line[pixel_offset + 2] = r; // Red
+                line[pixel_offset + 3] = 0; // X (unused padding)
             }
         }
 
-        frame_count += 1;
-
-        // Push the buffer
         appsrc.pushBuffer(buf) catch |err| {
             std.debug.print("Failed to push buffer: {}\n", .{err});
         };
     }
+
+    frame_count += 1;
 }
 
 fn createAndRun() !void {
@@ -51,11 +84,11 @@ fn createAndRun() !void {
     const pipeline = try gst.Pipeline.init("test-appsrc");
     defer pipeline.deinit();
 
-    // TODO: Add videoinfo here
-    // var videoInfo = try gst.VideoInfo.new();
-    // defer videoInfo.deinit();
-    //
-    // videoInfo.setFormat(gst.VideoFormat.rgbx, 1920, 1080);
+    var videoInfo = try gst.VideoInfo.new();
+    defer videoInfo.deinit();
+
+    try videoInfo.setFormat(gst.VideoFormat.bgrx, 320, 240);
+    videoInfo.setFPS(gst.Fraction.new(2, 1));
 
     var appsrc = try gst.AppSrc.init("source");
     defer appsrc.deinit();
@@ -65,20 +98,28 @@ fn createAndRun() !void {
     appsrc.setStreamType(.stream);
     appsrc.setFormat(.time);
 
-    const caps = gst.Caps.builder("video/x-raw")
-        .field("format", "RGB")
-        .field("width", 320)
-        .field("height", 240)
-        .field("framerate", gst.Fraction.new(30, 1))
-        .build();
-    defer caps.deinit();
+    // const caps = gst.Caps.builder("video/x-raw")
+    //     .field("format", "RGB")
+    //     .field("width", 320)
+    //     .field("height", 240)
+    //     .field("framerate", gst.Fraction.new(30, 1))
+    //     .build();
+    // defer caps.deinit();
+
+    const caps = try videoInfo.toCaps();
+    std.debug.print("caps: {s}\n", .{caps.toString()});
+
     appsrc.setCaps(caps);
+
+    var context = contextData{
+        .video_info = videoInfo,
+    };
 
     // Set up appsrc callbacks
     const callbacks = gst.AppSrc.AppSrcCallbacks.builder()
         .needData(onNeedData)
         .build();
-    try appsrc.setCallbacks(callbacks);
+    try appsrc.setCallbacks(callbacks, &context);
 
     const videoconvert = try gst.Element.init("videoconvert", "convert");
     const autovideosink = try gst.Element.init("autovideosink", "sink");
