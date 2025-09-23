@@ -1,36 +1,70 @@
 # gstreamer-zig
-Zig bindings for GStreamer multimedia framework
+Zig bindings for GStreamer
 
 ## Prerequisites
 
-This library requires GStreamer development packages to be installed on your system.
-
-### macOS (Homebrew)
-```bash
-brew install gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly
-```
+This bindings requires GStreamer development packages to be installed on your system. [Official installation instructions](https://gstreamer.freedesktop.org/documentation/installing/index.html)
 
 **For development/LSP support**, set the pkg-config path:
 ```bash
 export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 ```
 
-### macOS (GStreamer.framework)
-Download and install the GStreamer framework from [gstreamer.freedesktop.org](https://gstreamer.freedesktop.org/download/)
+## Get started example
+```zig
+const std = @import("std");
+const gst = @import("gst");
 
-**For development/LSP support**:
-```bash
-export PKG_CONFIG_PATH="/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig:$PKG_CONFIG_PATH"
-```
+var main_loop: ?gst.MainLoop = null;
 
-### Linux (Ubuntu/Debian)
-```bash
-sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-```
+fn main() !void {
+    try gst.init_check(null, null);
+    defer gst.deinit();
 
-### Linux (Fedora/RHEL)
-```bash
-sudo dnf install gstreamer1-devel gstreamer1-plugins-base-devel
+    main_loop = try gst.MainLoop.init(null, false);
+    defer if (main_loop) |loop| loop.deinit();
+
+    const pipeline = try gst.Pipeline.initLaunch("videotestsrc ! autovideosink");
+    defer pipeline.deinit();
+
+    const bus = try pipeline.getBus();
+    defer bus.deinit();
+
+    const watch_id = try bus.addWatch(struct {
+        fn watcher(msg: gst.Message) bool {
+            switch (msg.getType()) {
+                .err => {
+                    _ = msg.parseErrorAndPrint() catch {
+                        std.debug.print("Failed to parse error message\n", .{});
+                    };
+                    main_loop.?.quit();
+                    return false;
+                },
+                .eos => {
+                    std.debug.print("End of stream reached\n", .{});
+                    main_loop.?.quit();
+                    return false;
+                },
+                .state_changed => {
+                    std.debug.print("State changed\n", .{});
+                    return true;
+                },
+                else => {
+                    std.debug.print("Got message type: {}\n", .{msg.getType()});
+                    return true;
+                },
+            }
+        }
+    }.watcher);
+    std.debug.print("Added bus watch with ID: {}\n", .{watch_id});
+
+    try pipeline.start();
+    defer _ = pipeline.setState(.null_state);
+
+    main_loop.?.run();
+
+    std.debug.print("Main loop finished\n", .{});
+}
 ```
 
 ## Usage
