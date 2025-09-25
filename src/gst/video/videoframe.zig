@@ -3,7 +3,7 @@ pub const VideoInfo = @import("videoinfo.zig").VideoInfo;
 pub const Buffer = @import("../buffer.zig").Buffer;
 pub const core = @import("../core.zig");
 
-const c_video = video.c_video;
+const c = video.c_video;
 const std = @import("std");
 
 pub const VideoFrameFlags = enum(u32) {
@@ -17,11 +17,11 @@ pub const VideoFrameFlags = enum(u32) {
 };
 
 pub const VideoFrame = struct {
-    ptr: c_video.GstVideoFrame,
+    ptr: c.GstVideoFrame,
 
     pub fn fromBufferReadable(buffer_ref: Buffer, info: VideoInfo) !VideoFrame {
-        var frame: c_video.GstVideoFrame = undefined;
-        const success = c_video.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c_video.GST_MAP_READ);
+        var frame: c.GstVideoFrame = undefined;
+        const success = c.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c.GST_MAP_READ);
         if (success == 0) {
             return error.VideoFrameMapFailed;
         }
@@ -29,8 +29,8 @@ pub const VideoFrame = struct {
     }
 
     pub fn fromBufferWritable(buffer_ref: Buffer, info: VideoInfo) !VideoFrame {
-        var frame: c_video.GstVideoFrame = undefined;
-        const success = c_video.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c_video.GST_MAP_WRITE);
+        var frame: c.GstVideoFrame = undefined;
+        const success = c.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c.GST_MAP_WRITE);
         if (success == 0) {
             return error.VideoFrameMapFailed;
         }
@@ -38,8 +38,8 @@ pub const VideoFrame = struct {
     }
 
     pub fn fromBufferReadWrite(buffer_ref: Buffer, info: VideoInfo) !VideoFrame {
-        var frame: c_video.GstVideoFrame = undefined;
-        const success = c_video.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c_video.GST_MAP_READWRITE);
+        var frame: c.GstVideoFrame = undefined;
+        const success = c.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c.GST_MAP_READWRITE);
         if (success == 0) {
             return error.VideoFrameMapFailed;
         }
@@ -47,18 +47,18 @@ pub const VideoFrame = struct {
     }
 
     pub fn deinit(self: *VideoFrame) void {
-        c_video.gst_video_frame_unmap(&self.ptr);
+        c.gst_video_frame_unmap(&self.ptr);
     }
 
     pub fn copy(self: *const VideoFrame, dest: *VideoFrame) !void {
-        const success = c_video.gst_video_frame_copy(dest.frame, self.ptr);
+        const success = c.gst_video_frame_copy(dest.frame, self.ptr);
         if (success == 0) {
             return error.VideoFrameCopyFailed;
         }
     }
 
     pub fn copyPlane(self: *const VideoFrame, dest: *VideoFrame, plane: u32) !void {
-        const success = c_video.gst_video_frame_copy_plane(dest.frame, self.ptr, plane);
+        const success = c.gst_video_frame_copy_plane(dest.frame, self.ptr, plane);
         if (success == 0) {
             return error.VideoFrameCopyPlaneFailed;
         }
@@ -72,7 +72,7 @@ pub const VideoFrame = struct {
         return @intCast(self.ptr.info.height);
     }
 
-    pub fn getFormat(self: *const VideoFrame) c_video.GstVideoFormat {
+    pub fn getFormat(self: *const VideoFrame) c.GstVideoFormat {
         return self.ptr.info.finfo.*.format;
     }
 

@@ -90,6 +90,29 @@ pub const AppSrc = struct {
         c.g_object_set(self.el.ptr, "emit-signals", @as(c_int, if (emit) 1 else 0), @as(?*anyopaque, null));
     }
 
+    pub fn setOnNeedData(self: AppSrc, comptime callback_fn: anytype, user_data: anytype) !u64 {
+        const wrapper = struct {
+            fn needDataWrapper(appsrc_ptr: ?*anyopaque, length: c_uint, data: ?*anyopaque) callconv(.c) void {
+                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
+                callback_fn(&appsrc, length, data);
+            }
+        }.needDataWrapper;
+
+        const converted_user_data: ?*anyopaque = switch (@typeInfo(@TypeOf(user_data))) {
+            .pointer => @ptrCast(user_data),
+            .null => null,
+            .optional => |opt| if (user_data == null) null else switch (@typeInfo(opt.child)) {
+                .pointer => @ptrCast(user_data),
+                else => @ptrCast(&user_data),
+            },
+            else => @ptrCast(@constCast(&user_data)),
+        };
+
+        const handler_id = c.g_signal_connect_data(self.el.ptr, "need-data", @ptrCast(&wrapper), converted_user_data, null, 0);
+        if (handler_id == 0) return error.SignalConnectionFailed;
+        return @intCast(handler_id);
+    }
+
     pub fn setCallbacks(self: AppSrc, callbacks: AppSrcCallbacks, user_data: ?*anyopaque) !void {
         if (callbacks.need_data_wrapper) |wrapper| {
             const handler_id = c.g_signal_connect_data(self.el.ptr, "need-data", @ptrCast(wrapper), user_data, null, 0);

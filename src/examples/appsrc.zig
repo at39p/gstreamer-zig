@@ -1,5 +1,6 @@
 const std = @import("std");
 const gst = @import("gst");
+const common = @import("common.zig");
 
 var frame_count: u64 = 0;
 
@@ -116,10 +117,12 @@ fn createAndRun() !void {
     };
 
     // Set up appsrc callbacks
-    const callbacks = gst.AppSrc.AppSrcCallbacks.builder()
-        .needData(onNeedData)
-        .build();
-    try appsrc.setCallbacks(callbacks, &context);
+    // const callbacks = gst.AppSrc.AppSrcCallbacks.builder()
+    //     .needData(onNeedData)
+    //     .build();
+    // try appsrc.setCallbacks(callbacks, &context);
+
+    _ = try appsrc.setOnNeedData(onNeedData, &context);
 
     const videoconvert = try gst.Element.init("videoconvert", "convert");
     const autovideosink = try gst.Element.init("autovideosink", "sink");
@@ -183,15 +186,6 @@ fn createAndRun() !void {
     _ = pipeline.setState(.null_state);
 }
 
-fn run(_: ?*anyopaque) callconv(.c) c_int {
-    createAndRun() catch |err| {
-        std.debug.print("Pipeline error: {}\n", .{err});
-        return -1;
-    };
-
-    return 0;
-}
-
 pub fn main() !void {
-    try gst.macosMainSimple(run, null);
+    try gst.macosMainSimple(common.run(createAndRun), null);
 }

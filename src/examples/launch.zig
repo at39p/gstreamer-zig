@@ -1,5 +1,6 @@
 const std = @import("std");
 const gst = @import("gst");
+const common = @import("common.zig");
 
 var main_loop: ?gst.MainLoop = null;
 
@@ -56,15 +57,6 @@ fn createAndRun() !void {
     std.debug.print("Main loop finished\n", .{});
 }
 
-fn run(_: ?*anyopaque) callconv(.c) c_int {
-    createAndRun() catch |err| {
-        std.debug.print("Pipeline error: {}\n", .{err});
-        return -1;
-    };
-
-    return 0;
-}
-
 pub fn main() !void {
-    try gst.macosMainSimple(run, null);
+    try gst.macosMainSimple(common.run(createAndRun), null);
 }
