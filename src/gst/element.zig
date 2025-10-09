@@ -214,6 +214,14 @@ pub const Element = struct {
         }
         return null;
     }
+
+    pub fn requestPadSimple(self: Element, name: [*:0]const u8) !Pad {
+        const currentPad = c.gst_element_request_pad_simple(@ptrCast(self.ptr), name);
+        if (currentPad == null) {
+            return error.PadRequestFailed;
+        }
+        return currentPad;
+    }
 };
 
 pub const UriType = enum(c_uint) {
