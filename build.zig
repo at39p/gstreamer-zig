@@ -25,9 +25,6 @@ fn addGStreamerDeps(step: anytype, pkg_config_path: ?[]const u8, b: *std.Build) 
     // Only link libraries for compile steps
     if (T == *std.Build.Step.Compile) {
         step.linkLibC();
-        step.linkSystemLibrary2("gstreamer-1.0", .{ .use_pkg_config = .force });
-        step.linkSystemLibrary2("glib-2.0", .{ .use_pkg_config = .force });
-        step.linkSystemLibrary2("gobject-2.0", .{ .use_pkg_config = .force });
         step.linkSystemLibrary("gstapp-1.0");
         step.linkSystemLibrary2("gstreamer-video-1.0", .{ .use_pkg_config = .force });
     }
