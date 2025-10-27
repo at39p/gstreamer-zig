@@ -39,7 +39,7 @@ pub fn build(b: *std.Build) void {
     // std.Build.Step.TranslateC
 
     const gstreamer_module = b.addModule("gstreamer", .{
-        .root_source_file = b.path("src/gst.zig"),
+        .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -48,7 +48,7 @@ pub fn build(b: *std.Build) void {
         .name = "gstreamer-zig",
         .linkage = .static,
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/gst.zig"),
+            .root_source_file = b.path("src/root.zig"),
             .target = target,
             .optimize = optimize,
         }),
