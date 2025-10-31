@@ -36,8 +36,6 @@ pub fn build(b: *std.Build) void {
 
     const pkg_config_path = b.option([]const u8, "pkg_config_path", "Custom PKG_CONFIG_PATH for GStreamer");
 
-    // std.Build.Step.TranslateC
-
     const gstreamer_module = b.addModule("gstreamer", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
@@ -82,11 +80,6 @@ pub fn build(b: *std.Build) void {
         example_exe.root_module.addImport("gst", gstreamer_module);
         addGStreamerDeps(example_exe, pkg_config_path, b);
 
-        // Add extra libraries needed by specific examples
-        // if (std.mem.eql(u8, example.name, "appsrc")) {
-        //     example_exe.linkSystemLibrary("gstapp-1.0");
-        // }
-
         if (!example.skip_install) {
             b.installArtifact(example_exe);
         }
@@ -98,22 +91,4 @@ pub fn build(b: *std.Build) void {
         const example_run_step = b.step(step_name, example.description);
         example_run_step.dependOn(&example_run_cmd.step);
     }
-
-    // const lib_unit_tests = b.addTest(.{
-    //     .root_module = b.createModule(.{
-    //         .root_source_file = b.path("src/gstreamer.zig"),
-    //         .target = target,
-    //         .optimize = optimize,
-    //     }),
-    // });
-    //
-    // lib_unit_tests.linkLibC();
-    // lib_unit_tests.linkSystemLibrary2("gstreamer-1.0", .{ .use_pkg_config = .force });
-    // lib_unit_tests.linkSystemLibrary2("glib-2.0", .{ .use_pkg_config = .force });
-    // lib_unit_tests.linkSystemLibrary2("gobject-2.0", .{ .use_pkg_config = .force });
-    //
-    // const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
-    //
-    // const test_step = b.step("test", "Run unit tests");
-    // test_step.dependOn(&run_lib_unit_tests.step);
 }
