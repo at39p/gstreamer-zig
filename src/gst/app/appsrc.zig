@@ -10,46 +10,41 @@ pub const Sample = sample.Sample;
 pub const Buffer = buffer.Buffer;
 pub const Caps = caps.Caps;
 
-extern fn gst_app_src_push_buffer(appsrc: ?*anyopaque, buffer: ?*anyopaque) callconv(.c) c.GstFlowReturn;
-extern fn gst_app_src_push_sample(appsrc: ?*anyopaque, sample: ?*anyopaque) callconv(.c) c.GstFlowReturn;
-extern fn gst_app_src_end_of_stream(appsrc: ?*anyopaque) callconv(.c) c.GstFlowReturn;
+extern fn gst_app_src_push_buffer(appsrc: ?*anyopaque, buffer: ?*anyopaque) c.GstFlowReturn;
+extern fn gst_app_src_push_sample(appsrc: ?*anyopaque, sample: ?*anyopaque) c.GstFlowReturn;
+extern fn gst_app_src_end_of_stream(appsrc: ?*anyopaque) c.GstFlowReturn;
 
 pub const AppSrc = struct {
     el: element.Element,
 
     pub fn init(name: ?[*:0]const u8) !AppSrc {
         const el = try element.Element.init("appsrc", name);
-        return AppSrc{ .el = el };
+        return .{ .el = el };
     }
 
-    // TODO: Not sure deinit is needed here. Pipeline owns it and takes care of clean up
     pub fn deinit(self: AppSrc) void {
         _ = self;
+        // Pipeline owns the element and handles cleanup
     }
 
     pub inline fn asElement(self: AppSrc) element.Element {
         return self.el;
     }
 
+    // Core operations
     pub fn pushSample(self: AppSrc, sample_to_push: Sample) !void {
         const ret = gst_app_src_push_sample(@ptrCast(self.el.ptr), sample_to_push.ptr);
-        if (ret != c.GST_FLOW_OK) {
-            return error.PushSampleFailed;
-        }
+        if (ret != c.GST_FLOW_OK) return error.PushSampleFailed;
     }
 
     pub fn pushBuffer(self: AppSrc, buf: Buffer) !void {
-        const ret = gst_app_src_push_buffer(@ptrCast(self.asElement().ptr), buf.ptr);
-        if (ret != c.GST_FLOW_OK) {
-            return error.PushBufferFailed;
-        }
+        const ret = gst_app_src_push_buffer(@ptrCast(self.el.ptr), buf.ptr);
+        if (ret != c.GST_FLOW_OK) return error.PushBufferFailed;
     }
 
     pub fn endOfStream(self: AppSrc) !void {
         const ret = gst_app_src_end_of_stream(@ptrCast(self.el.ptr));
-        if (ret != c.GST_FLOW_OK) {
-            return error.EndOfStreamFailed;
-        }
+        if (ret != c.GST_FLOW_OK) return error.EndOfStreamFailed;
     }
 
     // Property setters
@@ -58,7 +53,102 @@ pub const AppSrc = struct {
     }
 
     pub fn setFormat(self: AppSrc, format: Format) void {
-        c.g_object_set(self.el.ptr, "format", @as(c_int, @intFromEnum(format)), @as(?*anyopaque, null));
+        c.g_object_set(self.el.ptr, "format", @intFromEnum(format), @as(?*anyopaque, null));
+    }
+
+    pub fn setIsLive(self: AppSrc, is_live: bool) void {
+        const value: c_int = if (is_live) 1 else 0;
+        c.g_object_set(self.el.ptr, "is-live", value, @as(?*anyopaque, null));
+    }
+
+    pub fn setStreamType(self: AppSrc, stream_type: StreamType) void {
+        c.g_object_set(self.el.ptr, "stream-type", @intFromEnum(stream_type), @as(?*anyopaque, null));
+    }
+
+    pub fn setMaxBytes(self: AppSrc, max_bytes: u64) void {
+        c.g_object_set(self.el.ptr, "max-bytes", max_bytes, @as(?*anyopaque, null));
+    }
+
+    pub fn setBlockSize(self: AppSrc, block_size: u32) void {
+        c.g_object_set(self.el.ptr, "blocksize", block_size, @as(?*anyopaque, null));
+    }
+
+    pub fn setEmitSignals(self: AppSrc, emit: bool) void {
+        const value: c_int = if (emit) 1 else 0;
+        c.g_object_set(self.el.ptr, "emit-signals", value, @as(?*anyopaque, null));
+    }
+
+    /// Connect a callback for the "need-data" signal.
+    /// Callback signature: fn(appsrc: *AppSrc, length: u32, userdata: T) void
+    pub fn connectNeedData(self: AppSrc, comptime callback: anytype, userdata: anytype) !u64 {
+        const UserDataT = @TypeOf(userdata);
+        const wrapper = struct {
+            fn needDataCallback(appsrc_ptr: ?*anyopaque, length: c_uint, data: ?*anyopaque) callconv(.c) void {
+                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
+                const typed_data = convertUserData(UserDataT, data);
+                callback(&appsrc, @as(u32, @intCast(length)), typed_data);
+            }
+        }.needDataCallback;
+
+        const handler_id = c.g_signal_connect_data(
+            self.el.ptr,
+            "need-data",
+            @ptrCast(&wrapper),
+            prepareUserData(userdata),
+            null,
+            0,
+        );
+        if (handler_id == 0) return error.SignalConnectionFailed;
+        return @intCast(handler_id);
+    }
+
+    /// Connect a callback for the "enough-data" signal.
+    /// Callback signature: fn(appsrc: *AppSrc, userdata: T) void
+    pub fn connectEnoughData(self: AppSrc, comptime callback: anytype, userdata: anytype) !u64 {
+        const UserDataT = @TypeOf(userdata);
+        const wrapper = struct {
+            fn enoughDataCallback(appsrc_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) void {
+                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
+                const typed_data = convertUserData(UserDataT, data);
+                callback(&appsrc, typed_data);
+            }
+        }.enoughDataCallback;
+
+        const handler_id = c.g_signal_connect_data(
+            self.el.ptr,
+            "enough-data",
+            @ptrCast(&wrapper),
+            prepareUserData(userdata),
+            null,
+            0,
+        );
+        if (handler_id == 0) return error.SignalConnectionFailed;
+        return @intCast(handler_id);
+    }
+
+    /// Connect a callback for the "seek-data" signal.
+    /// Callback signature: fn(appsrc: *AppSrc, offset: u64, userdata: T) bool
+    pub fn connectSeekData(self: AppSrc, comptime callback: anytype, userdata: anytype) !u64 {
+        const UserDataT = @TypeOf(userdata);
+        const wrapper = struct {
+            fn seekDataCallback(appsrc_ptr: ?*anyopaque, offset: c_ulong, data: ?*anyopaque) callconv(.c) c_int {
+                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
+                const typed_data = convertUserData(UserDataT, data);
+                const result = callback(&appsrc, @as(u64, @intCast(offset)), typed_data);
+                return if (result) 1 else 0;
+            }
+        }.seekDataCallback;
+
+        const handler_id = c.g_signal_connect_data(
+            self.el.ptr,
+            "seek-data",
+            @ptrCast(&wrapper),
+            prepareUserData(userdata),
+            null,
+            0,
+        );
+        if (handler_id == 0) return error.SignalConnectionFailed;
+        return @intCast(handler_id);
     }
 
     pub const Format = enum(c_int) {
@@ -70,153 +160,24 @@ pub const AppSrc = struct {
         percent = 5,
     };
 
-    pub fn setIsLive(self: AppSrc, is_live: bool) void {
-        c.g_object_set(self.el.ptr, "is-live", @as(c_int, if (is_live) 1 else 0), @as(?*anyopaque, null));
-    }
-
-    pub fn setStreamType(self: AppSrc, stream_type: StreamType) void {
-        c.g_object_set(self.el.ptr, "stream-type", @as(c_int, @intFromEnum(stream_type)), @as(?*anyopaque, null));
-    }
-
-    pub fn setMaxBytes(self: AppSrc, max_bytes: u64) void {
-        c.g_object_set(self.el.ptr, "max-bytes", @as(c_ulong, max_bytes), @as(?*anyopaque, null));
-    }
-
-    pub fn setBlockSize(self: AppSrc, block_size: u32) void {
-        c.g_object_set(self.el.ptr, "blocksize", @as(c_uint, block_size), @as(?*anyopaque, null));
-    }
-
-    pub fn setEmitSignals(self: AppSrc, emit: bool) void {
-        c.g_object_set(self.el.ptr, "emit-signals", @as(c_int, if (emit) 1 else 0), @as(?*anyopaque, null));
-    }
-
-    pub fn setOnNeedData(self: AppSrc, comptime callback_fn: anytype, user_data: anytype) !u64 {
-        const wrapper = struct {
-            fn needDataWrapper(appsrc_ptr: ?*anyopaque, length: c_uint, data: ?*anyopaque) callconv(.c) void {
-                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
-                callback_fn(&appsrc, length, data);
-            }
-        }.needDataWrapper;
-
-        const converted_user_data: ?*anyopaque = switch (@typeInfo(@TypeOf(user_data))) {
-            .pointer => @ptrCast(user_data),
-            .null => null,
-            .optional => |opt| if (user_data == null) null else switch (@typeInfo(opt.child)) {
-                .pointer => @ptrCast(user_data),
-                else => @ptrCast(&user_data),
-            },
-            else => @ptrCast(@constCast(&user_data)),
-        };
-
-        const handler_id = c.g_signal_connect_data(self.el.ptr, "need-data", @ptrCast(&wrapper), converted_user_data, null, 0);
-        if (handler_id == 0) return error.SignalConnectionFailed;
-        return @intCast(handler_id);
-    }
-
-    pub fn setCallbacks(self: AppSrc, callbacks: AppSrcCallbacks, user_data: ?*anyopaque) !void {
-        if (callbacks.need_data_wrapper) |wrapper| {
-            const handler_id = c.g_signal_connect_data(self.el.ptr, "need-data", @ptrCast(wrapper), user_data, null, 0);
-            if (handler_id == 0) return error.SignalConnectionFailed;
-        }
-        if (callbacks.enough_data_wrapper) |wrapper| {
-            const handler_id = c.g_signal_connect_data(self.el.ptr, "enough-data", @ptrCast(wrapper), user_data, null, 0);
-            if (handler_id == 0) return error.SignalConnectionFailed;
-        }
-        if (callbacks.seek_data_wrapper) |wrapper| {
-            const handler_id = c.g_signal_connect_data(self.el.ptr, "seek-data", @ptrCast(wrapper), user_data, null, 0);
-            if (handler_id == 0) return error.SignalConnectionFailed;
-        }
-    }
-
     pub const StreamType = enum(c_int) {
         stream = 0,
         seekable = 1,
         random_access = 2,
     };
-
-    pub const AppSrcCallbacks = struct {
-        need_data_wrapper: ?*const fn (?*anyopaque, c_uint, ?*anyopaque) callconv(.c) void = null,
-        enough_data_wrapper: ?*const fn (?*anyopaque, ?*anyopaque) callconv(.c) void = null,
-        seek_data_wrapper: ?*const fn (?*anyopaque, c_ulong, ?*anyopaque) callconv(.c) c_int = null,
-
-        pub fn builder() Builder {
-            return Builder{};
-        }
-
-        pub const Builder = struct {
-            callbacks: AppSrcCallbacks = AppSrcCallbacks{},
-
-            pub fn needData(self: Builder, comptime callback_fn: anytype) Builder {
-                validateNeedDataCallback(@TypeOf(callback_fn));
-                var result = self;
-
-                const wrapper = struct {
-                    fn needDataWrapper(appsrc_ptr: ?*anyopaque, length: c_uint, user_data: ?*anyopaque) callconv(.c) void {
-                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
-                        callback_fn(&appsrc, length, user_data);
-                    }
-                }.needDataWrapper;
-
-                result.callbacks.need_data_wrapper = wrapper;
-                return result;
-            }
-
-            pub fn enoughData(self: Builder, comptime callback_fn: anytype) Builder {
-                validateEnoughDataCallback(@TypeOf(callback_fn));
-                var result = self;
-
-                const wrapper = struct {
-                    fn enoughDataWrapper(appsrc_ptr: ?*anyopaque, user_data: ?*anyopaque) callconv(.c) void {
-                        _ = user_data;
-                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
-                        callback_fn(&appsrc);
-                    }
-                }.enoughDataWrapper;
-
-                result.callbacks.enough_data_wrapper = wrapper;
-                return result;
-            }
-
-            pub fn seekData(self: Builder, comptime callback_fn: anytype) Builder {
-                validateSeekDataCallback(@TypeOf(callback_fn));
-                var result = self;
-
-                const wrapper = struct {
-                    fn seekDataWrapper(appsrc_ptr: ?*anyopaque, offset: c_ulong, user_data: ?*anyopaque) callconv(.c) c_int {
-                        _ = user_data;
-                        var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
-                        return if (callback_fn(&appsrc, offset)) 1 else 0;
-                    }
-                }.seekDataWrapper;
-
-                result.callbacks.seek_data_wrapper = wrapper;
-                return result;
-            }
-
-            pub fn build(self: Builder) AppSrcCallbacks {
-                return self.callbacks;
-            }
-        };
-
-        fn validateNeedDataCallback(comptime FnType: type) void {
-            const info = @typeInfo(FnType);
-            if (info != .@"fn") @compileError("needData callback must be a function");
-            const params = info.@"fn".params;
-            if (params.len != 3) @compileError("needData callback must take (appsrc: *AppSrc, length: u32, user_data: ?*anyopaque)");
-        }
-
-        fn validateEnoughDataCallback(comptime FnType: type) void {
-            const info = @typeInfo(FnType);
-            if (info != .@"fn") @compileError("enoughData callback must be a function");
-            const params = info.@"fn".params;
-            if (params.len != 1) @compileError("enoughData callback must take (appsrc: *AppSrc)");
-        }
-
-        fn validateSeekDataCallback(comptime FnType: type) void {
-            const info = @typeInfo(FnType);
-            if (info != .@"fn") @compileError("seekData callback must be a function");
-            const params = info.@"fn".params;
-            if (params.len != 2) @compileError("seekData callback must take (appsrc: *AppSrc, offset: u64) and return bool");
-        }
-    };
 };
+
+fn prepareUserData(userdata: anytype) ?*anyopaque {
+    const T = @TypeOf(userdata);
+    return switch (@typeInfo(T)) {
+        .pointer => @ptrCast(@constCast(userdata)),
+        else => @ptrCast(@constCast(&userdata)),
+    };
+}
+
+fn convertUserData(comptime T: type, data: ?*anyopaque) T {
+    return switch (@typeInfo(T)) {
+        .pointer => @ptrCast(@alignCast(data.?)),
+        else => @as(*T, @ptrCast(@alignCast(data.?))).*,
+    };
+}

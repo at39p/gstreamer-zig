@@ -8,11 +8,8 @@ const contextData = struct {
     video_info: gst.VideoInfo,
 };
 
-fn onNeedData(appsrc: *gst.AppSrc, length: u32, user_data: ?*anyopaque) void {
+fn onNeedData(appsrc: *gst.AppSrc, length: u32, context: *contextData) void {
     _ = length;
-
-    const data = user_data orelse return;
-    const context: *contextData = @ptrCast(@alignCast(data));
 
     if (frame_count == 100) {
         appsrc.endOfStream() catch |err| {
@@ -117,12 +114,7 @@ fn createAndRun() !void {
     };
 
     // Set up appsrc callbacks
-    // const callbacks = gst.AppSrc.AppSrcCallbacks.builder()
-    //     .needData(onNeedData)
-    //     .build();
-    // try appsrc.setCallbacks(callbacks, &context);
-
-    _ = try appsrc.setOnNeedData(onNeedData, &context);
+    _ = try appsrc.connectNeedData(onNeedData, &context);
 
     const videoconvert = try gst.Element.init("videoconvert", "convert");
     const autovideosink = try gst.Element.init("autovideosink", "sink");
