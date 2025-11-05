@@ -23,8 +23,17 @@ pub const AppSrc = struct {
     }
 
     pub fn deinit(self: AppSrc) void {
-        _ = self;
-        // Pipeline owns the element and handles cleanup
+        const parent = c.gst_element_get_parent(self.el.ptr);
+        if (parent) |p| {
+            const pipeline_type = c.gst_pipeline_get_type();
+            const is_pipeline = c.g_type_check_instance_is_a(@ptrCast(p), pipeline_type) != 0;
+            c.gst_object_unref(p);
+
+            if (is_pipeline) {
+                return;
+            }
+        }
+        self.el.deinit();
     }
 
     pub inline fn asElement(self: AppSrc) element.Element {
