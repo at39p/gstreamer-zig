@@ -77,9 +77,6 @@ pub const objectUnref = core.objectUnref;
 pub const macosMain = core.macosMain;
 pub const macosMainSimple = core.macosMainSimple;
 
-// GLib MainLoop functions
-pub const MainLoop = core.MainLoop;
-
 // gst/video/video.h:
 pub const VideoInfo = videoinfo.VideoInfo;
 pub const VideoFormat = videoformat.VideoFormat;

@@ -1,15 +1,16 @@
 const std = @import("std");
 const gst = @import("gst");
+const glib = @import("glib");
 const common = @import("common.zig");
 
-var main_loop: ?gst.MainLoop = null;
+var main_loop: ?glib.MainLoop = null;
 
 fn createAndRun() !void {
     try gst.init_check(null, null);
     defer gst.deinit();
 
     // Create GLib main loop
-    main_loop = try gst.MainLoop.init(null, false);
+    main_loop = try glib.MainLoop.init(null, false);
     defer if (main_loop) |loop| loop.deinit();
 
     // TODO: Make launch string come from args
