@@ -41,12 +41,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-
-    const glib_module = b.addModule("glib", .{
-        .root_source_file = b.path("src/glib/glib.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+    addGStreamerDeps(gstreamer_module, pkg_config_path, b);
 
     const lib = b.addLibrary(.{
         .name = "gstreamer-zig",
@@ -60,7 +55,6 @@ pub fn build(b: *std.Build) void {
 
     addGStreamerDeps(lib, pkg_config_path, b);
     addGStreamerDeps(gstreamer_module, pkg_config_path, b);
-    addGStreamerDeps(glib_module, pkg_config_path, b);
 
     b.installArtifact(lib);
 
@@ -85,7 +79,6 @@ pub fn build(b: *std.Build) void {
             }),
         });
         example_exe.root_module.addImport("gst", gstreamer_module);
-        example_exe.root_module.addImport("glib", glib_module);
         addGStreamerDeps(example_exe, pkg_config_path, b);
 
         if (!example.skip_install) {

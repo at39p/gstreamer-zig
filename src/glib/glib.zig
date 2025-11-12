@@ -1,7 +1,4 @@
-pub const c = @cImport({
-    @cInclude("glib.h");
-    @cInclude("glib-object.h");
-});
+pub const c = @import("../c.zig").c;
 
 pub const GMainLoop = *c.GMainLoop;
 

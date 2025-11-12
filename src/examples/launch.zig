@@ -1,6 +1,6 @@
 const std = @import("std");
 const gst = @import("gst");
-const glib = @import("glib");
+const glib = gst.glib;
 const common = @import("common.zig");
 
 var main_loop: ?glib.MainLoop = null;

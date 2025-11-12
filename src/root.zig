@@ -1,6 +1,9 @@
 pub const core = @import("gst/core.zig");
 pub const element = @import("gst/element.zig");
 
+// Expose GLib as a separate "namespace"
+pub const glib = @import("glib/glib.zig");
+
 // Expose the C bindings for advanced usage
 pub const c = core.c;
 pub const pipeline = @import("gst/pipeline.zig");
