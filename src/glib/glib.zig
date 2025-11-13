@@ -1,6 +1,6 @@
 pub const c = @import("../c.zig").c;
 
-pub const GMainLoop = *c.GMainLoop;
+const GMainLoop = *c.GMainLoop;
 
 // GLib MainLoop wrapper
 pub const MainLoop = struct {
