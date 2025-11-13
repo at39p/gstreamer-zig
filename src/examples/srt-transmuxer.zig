@@ -5,7 +5,7 @@ const contextData = struct {
     queue: gst.Element,
 };
 
-fn createAndRun() !void {
+fn run() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -166,15 +166,6 @@ fn pad_added_handler(element: gst.Element, new_pad: gst.Pad, user_data: ?*anyopa
     std.debug.print("Successfully linked {s} to queue\n", .{name});
 }
 
-fn run(_: ?*anyopaque) callconv(.c) c_int {
-    createAndRun() catch |err| {
-        std.debug.print("Pipeline error: {}\n", .{err});
-        return -1;
-    };
-
-    return 0;
-}
-
 pub fn main() !void {
-    try gst.macosMainSimple(run, null);
+    try gst.macosMainSimple(run);
 }

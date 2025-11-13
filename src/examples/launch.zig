@@ -1,11 +1,10 @@
 const std = @import("std");
 const gst = @import("gst");
 const glib = gst.glib;
-const common = @import("common.zig");
 
 var main_loop: ?glib.MainLoop = null;
 
-fn createAndRun() !void {
+fn run() !void {
     try gst.init_check(null, null);
     defer gst.deinit();
 
@@ -59,5 +58,5 @@ fn createAndRun() !void {
 }
 
 pub fn main() !void {
-    try gst.macosMainSimple(common.run(createAndRun), null);
+    try gst.macosMainSimple(run);
 }

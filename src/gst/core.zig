@@ -1,3 +1,4 @@
+const std = @import("std");
 pub const c = @import("../c.zig").c;
 
 pub const GstElement = *c.GstElement;
@@ -49,15 +50,28 @@ pub inline fn objectUnref(object: anytype) void {
     c.gst_object_unref(object);
 }
 
-// TODO: Untested
-pub fn macosMain(run: fn (_: ?*anyopaque) callconv(.c) c_int, argc: c_int, argv: [*c][*c]u8, user_data: ?*anyopaque) !void {
-    if (c.gst_macos_main(run, argc, argv, user_data) != 0) {
+// macOS specific funcs
+fn macosMakeWrapper(comptime func: fn () anyerror!void) fn (?*anyopaque) callconv(.c) c_int {
+    const Wrapper = struct {
+        fn runImpl(_: ?*anyopaque) callconv(.c) c_int {
+            func() catch |err| {
+                std.debug.print("Error: {}\n", .{err});
+                return -1;
+            };
+            return 0;
+        }
+    };
+    return Wrapper.runImpl;
+}
+
+pub fn macosMain(comptime func: fn () anyerror!void, argc: c_int, argv: [*c][*c]u8) !void {
+    if (c.gst_macos_main(macosMakeWrapper(func), argc, argv, null) != 0) {
         return error.GstMacOsMainFailed;
     }
 }
 
-pub fn macosMainSimple(run: fn (_: ?*anyopaque) callconv(.c) c_int, user_data: ?*anyopaque) !void {
-    if (c.gst_macos_main_simple(run, user_data) != 0) {
+pub fn macosMainSimple(comptime func: fn () anyerror!void) !void {
+    if (c.gst_macos_main_simple(macosMakeWrapper(func), null) != 0) {
         return error.GstMacOsMainFailed;
     }
 }

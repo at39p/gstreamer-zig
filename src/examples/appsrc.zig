@@ -1,6 +1,5 @@
 const std = @import("std");
 const gst = @import("gst");
-const common = @import("common.zig");
 
 var frame_count: u64 = 0;
 
@@ -75,7 +74,7 @@ fn onNeedData(appsrc: *gst.AppSrc, length: u32, context: *contextData) void {
     frame_count += 1;
 }
 
-fn createAndRun() !void {
+fn run() !void {
     gst.init(null, null);
     defer gst.deinit();
 
@@ -179,5 +178,5 @@ fn createAndRun() !void {
 }
 
 pub fn main() !void {
-    try gst.macosMainSimple(common.run(createAndRun), null);
+    try gst.macosMainSimple(run);
 }
