@@ -11,6 +11,12 @@ pub const StateChangeReturn = core.StateChangeReturn;
 pub const Bin = struct {
     ptr: GstBin,
 
+    // TODO: The thoughts behind this is to have "init" across all types
+    // Find out if we makes _any_ sense.
+    pub fn init(name: [*:0]const u8) !Bin {
+        return try new(name);
+    }
+
     pub fn new(name: [*:0]const u8) !Bin {
         const bin = c.gst_bin_new(name);
         if (bin == null) {
@@ -107,6 +113,7 @@ pub const Bin = struct {
     }
 };
 
+// TODO: These are unreachable. Should they be reachable or removed?
 pub fn addMany(bin: Bin, elements: []const Element) !void {
     for (elements) |el| {
         try bin.add(el);
