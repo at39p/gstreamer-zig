@@ -10,7 +10,7 @@ fn run() !void {
 
     const sink = try gst.Element.init("fakesink", "sink");
 
-    const bin = try gst.Bin.init("sink");
+    const bin = try gst.Bin.init("example");
     try bin.add(source);
     try bin.add(sink);
 
