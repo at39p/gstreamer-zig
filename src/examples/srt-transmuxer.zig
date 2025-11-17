@@ -10,7 +10,7 @@ fn run() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    try gst.init_check(null, null);
+    try gst.init_check(null);
     defer gst.deinit();
 
     const pipeline = try gst.Pipeline.init("srt-transmuxer");

@@ -75,7 +75,7 @@ fn onNeedData(appsrc: *gst.AppSrc, length: u32, context: *contextData) void {
 }
 
 fn run() !void {
-    gst.init(null, null);
+    gst.init(null);
     defer gst.deinit();
 
     const pipeline = try gst.Pipeline.init("test-appsrc");

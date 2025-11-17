@@ -25,13 +25,41 @@ pub const StateChangeReturn = enum(c_int) {
     no_preroll = c.GST_STATE_CHANGE_NO_PREROLL,
 };
 
-pub fn init(argc: ?*c_int, argv: ?*?*?*c_char) void {
-    c.gst_init(argc, argv);
+pub fn init(args: ?[]const [:0]const u8) void {
+    if (args) |a| {
+        var c_argv_buf: [256][*:0]u8 = undefined;
+        std.debug.assert(a.len <= c_argv_buf.len);
+
+        for (a, 0..) |arg, i| {
+            c_argv_buf[i] = @constCast(arg.ptr);
+        }
+
+        var argc: c_int = @intCast(a.len);
+        var argv_ptr: [*][*:0]u8 = &c_argv_buf;
+        c.gst_init(&argc, @ptrCast(&argv_ptr));
+    } else {
+        c.gst_init(null, null);
+    }
 }
 
-pub fn init_check(argc: ?*c_int, argv: ?*?*?*c_char) !void {
+pub fn init_check(args: ?[]const [:0]const u8) !void {
     var err: ?*c.GError = null;
-    const success = c.gst_init_check(argc, argv, &err);
+
+    const success = if (args) |a| blk: {
+        var c_argv_buf: [256][*:0]u8 = undefined;
+        if (a.len > c_argv_buf.len) return error.TooManyArguments;
+
+        for (a, 0..) |arg, i| {
+            c_argv_buf[i] = @constCast(arg.ptr);
+        }
+
+        var argc: c_int = @intCast(a.len);
+        var argv_ptr: [*][*:0]u8 = &c_argv_buf;
+        break :blk c.gst_init_check(&argc, @ptrCast(&argv_ptr), &err);
+    } else blk: {
+        break :blk c.gst_init_check(null, null, &err);
+    };
+
     if (err) |e| {
         c.g_error_free(e);
         return error.InitializationFailed;

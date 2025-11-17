@@ -5,15 +5,25 @@ const glib = gst.glib;
 var main_loop: ?glib.MainLoop = null;
 
 fn run() !void {
-    try gst.init_check(null, null);
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    if (args.len < 2) {
+        return error.MissingPipelineArgument;
+    }
+
+    try gst.init_check(args);
     defer gst.deinit();
 
     // Create GLib main loop
     main_loop = try glib.MainLoop.init(null, false);
     defer if (main_loop) |loop| loop.deinit();
 
-    // TODO: Make launch string come from args
-    const pipeline = try gst.Pipeline.initLaunch("videotestsrc ! autovideosink");
+    const pipeline = try gst.Pipeline.initLaunch(args[1]);
     defer pipeline.deinit();
 
     const bus = try pipeline.getBus();

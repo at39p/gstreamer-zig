@@ -2,7 +2,7 @@ const std = @import("std");
 const gst = @import("gst");
 
 fn run() !void {
-    gst.init(null, null);
+    gst.init(null);
     defer gst.deinit();
 
     const source = try gst.Element.init("fakesrc", "src");
