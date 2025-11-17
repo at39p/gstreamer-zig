@@ -14,14 +14,15 @@ export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 ```zig
 const std = @import("std");
 const gst = @import("gst");
+const glib = gst.glib;
 
-var main_loop: ?gst.MainLoop = null;
+var main_loop: ?glib.MainLoop = null;
 
-fn main() !void {
-    try gst.init_check(null, null);
+pub fn main() !void {
+    try gst.init_check(null);
     defer gst.deinit();
 
-    main_loop = try gst.MainLoop.init(null, false);
+    main_loop = try glib.MainLoop.init(null, false);
     defer if (main_loop) |loop| loop.deinit();
 
     const pipeline = try gst.Pipeline.initLaunch("videotestsrc ! autovideosink");
