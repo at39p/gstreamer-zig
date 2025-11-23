@@ -5,11 +5,6 @@ Zig bindings for GStreamer
 
 This bindings requires GStreamer development packages to be installed on your system. [Official installation instructions](https://gstreamer.freedesktop.org/documentation/installing/index.html)
 
-**For development/LSP support**, set the pkg-config path:
-```bash
-export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
-```
-
 ## Get started example
 ```zig
 const std = @import("std");
@@ -82,18 +77,14 @@ Add as a dependency in your `build.zig.zon`:
 
 In your `build.zig`:
 ```zig
-const gstreamer = b.dependency("gstreamer", .{
+const gstreamer = b.dependency("gstreamer_zig", .{
     .target = target,
     .optimize = optimize,
 });
 
-exe.root_module.addImport("gstreamer", gstreamer.module("gstreamer"));
+exe.root_module.addImport("gstreamer", gstreamer_zig.module("gstreamer"));
+
+exe.linkLibC();
+exe.linkSystemLibrary2("gstreamer-1.0", .{ .use_pkg_config = .force });
 ```
-
-## Building
-
-```bash
-zig build
-```
-
 
