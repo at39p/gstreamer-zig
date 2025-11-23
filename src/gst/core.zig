@@ -104,6 +104,48 @@ pub fn macosMainSimple(comptime func: fn () anyerror!void) !void {
     }
 }
 
+// Version
+pub const Version = struct {
+    major: u32,
+    minor: u32,
+    micro: u32,
+    nano: u32,
+
+    pub fn format(
+        self: Version,
+        comptime _: []const u8,
+        _: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        if (self.nano == 0) {
+            try writer.print("{d}.{d}.{d}", .{ self.major, self.minor, self.micro });
+        } else {
+            try writer.print("{d}.{d}.{d}.{d}", .{ self.major, self.minor, self.micro, self.nano });
+        }
+    }
+};
+
+pub fn version() Version {
+    var major: c_uint = undefined;
+    var minor: c_uint = undefined;
+    var micro: c_uint = undefined;
+    var nano: c_uint = undefined;
+
+    c.gst_version(&major, &minor, &micro, &nano);
+
+    return .{
+        .major = major,
+        .minor = minor,
+        .micro = micro,
+        .nano = nano,
+    };
+}
+
+pub fn versionString() [*:0]const u8 {
+    return c.gst_version_string();
+}
+
+// TODO: Find out where this belong once and for all.
 pub const Fraction = struct {
     numerator: i32,
     denominator: i32,

@@ -22,13 +22,6 @@ pub const stream = @import("gst/stream.zig");
 pub const appsink = @import("gst/app/appsink.zig");
 pub const appsrc = @import("gst/app/appsrc.zig");
 
-// Video
-pub const video = @import("gst/video/video.zig");
-pub const videoinfo = @import("gst/video/videoinfo.zig");
-pub const videoformat = @import("gst/video/videoformat.zig");
-pub const videoformatinfo = @import("gst/video/videoformatinfo.zig");
-pub const videoframe = @import("gst/video/videoframe.zig");
-
 pub const GstElement = core.GstElement;
 pub const Element = element.Element;
 pub const UriType = element.UriType;
@@ -59,10 +52,14 @@ pub const GetStateResult = Element.GetStateResult;
 
 pub const GStreamerError = errors.GStreamerError;
 
+pub const Version = core.Version;
+
 // Core functions
 pub const init = core.init;
 pub const init_check = core.init_check;
 pub const deinit = core.deinit;
+pub const version = core.version;
+pub const versionString = core.versionString;
 
 // Element functions
 pub const getState = Element.getState;
@@ -80,7 +77,13 @@ pub const objectUnref = core.objectUnref;
 pub const macosMain = core.macosMain;
 pub const macosMainSimple = core.macosMainSimple;
 
-// gst/video/video.h:
+// Video
+pub const video = @import("gst/video/video.zig");
+pub const videoinfo = @import("gst/video/videoinfo.zig");
+pub const videoformat = @import("gst/video/videoformat.zig");
+pub const videoformatinfo = @import("gst/video/videoformatinfo.zig");
+pub const videoframe = @import("gst/video/videoframe.zig");
+
 pub const VideoInfo = videoinfo.VideoInfo;
 pub const VideoFormat = videoformat.VideoFormat;
 pub const VideoFormatInfo = videoformatinfo.VideoFormatInfo;
