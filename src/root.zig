@@ -56,6 +56,12 @@ pub const GStreamerError = errors.GStreamerError;
 
 pub const Version = core.Version;
 
+// Time constants (all in nanoseconds)
+pub const SECOND = core.SECOND;
+pub const MSECOND = core.MSECOND;
+pub const USECOND = core.USECOND;
+pub const NSECOND = core.NSECOND;
+
 // Core functions
 pub const init = core.init;
 pub const init_check = core.init_check;

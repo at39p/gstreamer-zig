@@ -25,6 +25,11 @@ pub const StateChangeReturn = enum(c_int) {
     no_preroll = c.GST_STATE_CHANGE_NO_PREROLL,
 };
 
+pub const SECOND: u64 = 1_000_000_000; // GST_SECOND
+pub const MSECOND: u64 = 1_000_000; // GST_MSECOND
+pub const USECOND: u64 = 1_000; // GST_USECOND
+pub const NSECOND: u64 = 1; // GST_NSECOND
+
 pub fn init(args: ?[]const [:0]const u8) void {
     if (args) |a| {
         var c_argv_buf: [256][*:0]u8 = undefined;

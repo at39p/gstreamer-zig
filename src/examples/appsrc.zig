@@ -25,7 +25,7 @@ fn onNeedData(appsrc: *gst.AppSrc, length: u32, context: *contextData) void {
 
     const buffer = gst.Buffer.init(context.video_info.getSize());
     if (buffer) |buf| {
-        buf.setPts(frame_count * 500 * 1000000); // 500ms in nanoseconds (GST_MSECOND equivalent) // TODO: Use GST_MSECOND
+        buf.setPts(frame_count * 500 * gst.MSECOND);
 
         var vframe = gst.VideoFrame.fromBufferWritable(buf, context.video_info) catch |err| {
             std.debug.print("Failed to create video frame: {}\n", .{err});
