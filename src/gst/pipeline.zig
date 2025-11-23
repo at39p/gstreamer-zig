@@ -3,6 +3,8 @@ const core = @import("core.zig");
 const element = @import("element.zig");
 const bus = @import("bus.zig");
 
+const Clock = @import("clock.zig").Clock;
+
 pub const c = core.c;
 pub const State = core.State;
 pub const StateChangeReturn = core.StateChangeReturn;
@@ -108,13 +110,12 @@ pub const Pipeline = struct {
         }
     }
 
-    // TODO: Return Clock, but first convert GstClock to Zig Clock struct:
-    // pub fn getClock(self: Pipeline) !Clock {
-    //     const clock_ptr = c.gst_pipeline_get_pipeline_clock(self.element.ptr);
-    //     if (clock_ptr) |c| {
-    //         return Clock{ .ptr = @ptrCast(c) };
-    //     } else {
-    //         return error.ClockNotFound;
-    //     }
-    // }
+    pub fn getClock(self: Pipeline) !Clock {
+        const clock_ptr = c.gst_pipeline_get_pipeline_clock(@ptrCast(self.element.ptr));
+        if (clock_ptr) |clk| {
+            return Clock{ .ptr = @ptrCast(clk) };
+        } else {
+            return error.ClockNotFound;
+        }
+    }
 };

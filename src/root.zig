@@ -17,6 +17,7 @@ pub const sample = @import("gst/sample.zig");
 pub const buffer = @import("gst/buffer.zig");
 pub const pad = @import("gst/pad.zig");
 pub const stream = @import("gst/stream.zig");
+pub const clock = @import("gst/clock.zig");
 
 /// App
 pub const appsink = @import("gst/app/appsink.zig");
@@ -40,6 +41,7 @@ pub const Fraction = caps.Fraction;
 pub const Pad = pad.Pad;
 pub const Stream = stream.Stream;
 pub const StreamCollection = stream.StreamCollection;
+pub const Clock = @import("gst/clock.zig").Clock;
 
 pub const AppSink = appsink.AppSink;
 pub const AppSrc = appsrc.AppSrc;
