@@ -1,10 +1,9 @@
 const std = @import("std");
 const core = @import("core.zig");
-const caps = @import("Caps.zig");
 
 pub const c = core.c;
 pub const GstStructure = core.GstStructure;
-pub const Fraction = caps.Fraction;
+pub const Fraction = @import("Fraction.zig").Fraction;
 
 pub const Structure = struct {
     ptr: *GstStructure,

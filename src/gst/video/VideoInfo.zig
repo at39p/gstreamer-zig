@@ -3,6 +3,8 @@ pub const videoFormat = @import("VideoFormat.zig");
 pub const caps = @import("../Caps.zig");
 pub const core = @import("../core.zig");
 
+const Fraction = @import("../Fraction.zig").Fraction;
+
 const c = video.c_video;
 
 pub const VideoInfo = struct {
@@ -54,7 +56,7 @@ pub const VideoInfo = struct {
         }
     }
 
-    pub fn setFPS(self: *VideoInfo, fraction: core.Fraction) void {
+    pub fn setFPS(self: *VideoInfo, fraction: Fraction) void {
         self.ptr.fps_d = fraction.denominator;
         self.ptr.fps_n = fraction.numerator;
     }

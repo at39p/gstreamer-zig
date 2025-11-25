@@ -3,8 +3,7 @@ const core = @import("core.zig");
 
 pub const c = core.c;
 pub const GstCaps = core.GstCaps;
-
-pub const Fraction = core.Fraction;
+pub const Fraction = @import("Fraction.zig").Fraction;
 
 pub const Caps = struct {
     ptr: GstCaps,
