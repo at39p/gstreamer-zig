@@ -1,6 +1,4 @@
-const core = @import("core.zig");
-
-pub const c = core.c;
+const c = @import("core.zig").c;
 
 pub const Fraction = struct {
     numerator: i32,

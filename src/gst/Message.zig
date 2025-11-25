@@ -2,7 +2,7 @@ const std = @import("std");
 const core = @import("core.zig");
 
 pub const c = core.c;
-pub const GstMessage = *c.GstMessage;
+pub const GstMessage = core.GstMessage;
 
 // GStreamer message types
 pub const MessageType = enum(c_int) {

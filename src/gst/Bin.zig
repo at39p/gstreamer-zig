@@ -3,7 +3,7 @@ const core = @import("core.zig");
 const element = @import("Element.zig");
 
 pub const c = core.c;
-pub const GstBin = *c.GstBin;
+pub const GstBin = core.GstBin;
 pub const Element = element.Element;
 pub const State = core.State;
 pub const StateChangeReturn = core.StateChangeReturn;

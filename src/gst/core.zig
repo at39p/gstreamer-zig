@@ -1,14 +1,19 @@
 const std = @import("std");
 pub const c = @import("../c.zig").c;
 
+// GStreamer C type aliases
 pub const GstElement = *c.GstElement;
 pub const GstPipeline = *c.GstPipeline;
+pub const GstBin = *c.GstBin;
 pub const GstCaps = *c.GstCaps;
 pub const GstPad = *c.GstPad;
+pub const GstBus = *c.GstBus;
+pub const GstMessage = *c.GstMessage;
 pub const GstSample = *c.GstSample;
 pub const GstStructure = *c.GstStructure;
 pub const GstStream = *c.GstStream;
 pub const GstStreamCollection = *c.GstStreamCollection;
+pub const GstClock = *c.GstClock;
 
 pub const State = enum(c_int) {
     void_pending = c.GST_STATE_VOID_PENDING,

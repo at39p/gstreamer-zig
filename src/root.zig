@@ -14,10 +14,6 @@ pub const caps = @import("gst/Caps.zig");
 pub const stream = @import("gst/Stream.zig");
 pub const fraction = @import("gst/Fraction.zig");
 
-// Core types from core.zig
-pub const GstElement = core.GstElement;
-pub const GstPipeline = core.GstPipeline;
-
 // Primary types - imported directly for convenience
 pub const Element = element.Element;
 pub const UriType = element.UriType;

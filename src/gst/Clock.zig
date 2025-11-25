@@ -2,7 +2,7 @@ const std = @import("std");
 const core = @import("core.zig");
 
 pub const c = core.c;
-pub const GstClock = *c.GstClock;
+pub const GstClock = core.GstClock;
 
 pub const Clock = struct {
     ptr: GstClock,

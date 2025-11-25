@@ -3,8 +3,8 @@ const core = @import("core.zig");
 const message = @import("Message.zig");
 
 pub const c = core.c;
-pub const GstBus = *c.GstBus;
-pub const GstMessage = *c.GstMessage;
+pub const GstBus = core.GstBus;
+pub const GstMessage = core.GstMessage;
 
 pub const Bus = struct {
     ptr: GstBus,
