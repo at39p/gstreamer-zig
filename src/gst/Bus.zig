@@ -1,6 +1,6 @@
 const std = @import("std");
 const core = @import("core.zig");
-const message = @import("message.zig");
+const message = @import("Message.zig");
 
 pub const c = core.c;
 pub const GstBus = *c.GstBus;

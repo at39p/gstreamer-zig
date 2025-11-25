@@ -1,6 +1,6 @@
 const std = @import("std");
 const core = @import("core.zig");
-const caps = @import("caps.zig");
+const caps = @import("Caps.zig");
 
 pub const c = core.c;
 pub const GstStructure = core.GstStructure;

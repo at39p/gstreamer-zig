@@ -1,6 +1,6 @@
 const std = @import("std");
 const core = @import("core.zig");
-const element = @import("element.zig");
+const element = @import("Element.zig");
 
 pub const c = core.c;
 pub const GstBin = *c.GstBin;

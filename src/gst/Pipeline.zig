@@ -1,9 +1,9 @@
 const std = @import("std");
 const core = @import("core.zig");
-const element = @import("element.zig");
-const bus = @import("bus.zig");
+const element = @import("Element.zig");
+const bus = @import("Bus.zig");
 
-const Clock = @import("clock.zig").Clock;
+const Clock = @import("Clock.zig").Clock;
 
 pub const c = core.c;
 pub const State = core.State;

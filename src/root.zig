@@ -1,27 +1,27 @@
 pub const core = @import("gst/core.zig");
-pub const element = @import("gst/element.zig");
+pub const element = @import("gst/Element.zig");
 
 // Expose GLib as a separate "namespace"
 pub const glib = @import("glib/glib.zig");
 
 // Expose the C bindings for advanced usage
 pub const c = core.c;
-pub const pipeline = @import("gst/pipeline.zig");
-pub const bin = @import("gst/bin.zig");
-pub const caps = @import("gst/caps.zig");
+pub const pipeline = @import("gst/Pipeline.zig");
+pub const bin = @import("gst/Bin.zig");
+pub const caps = @import("gst/Caps.zig");
 pub const errors = @import("gst/errors.zig");
-pub const bus = @import("gst/bus.zig");
-pub const message = @import("gst/message.zig");
+pub const bus = @import("gst/Bus.zig");
+pub const message = @import("gst/Message.zig");
 pub const properties = @import("gst/properties.zig");
-pub const sample = @import("gst/sample.zig");
-pub const buffer = @import("gst/buffer.zig");
-pub const pad = @import("gst/pad.zig");
-pub const stream = @import("gst/stream.zig");
-pub const clock = @import("gst/clock.zig");
+pub const sample = @import("gst/Sample.zig");
+pub const buffer = @import("gst/Buffer.zig");
+pub const pad = @import("gst/Pad.zig");
+pub const stream = @import("gst/Stream.zig");
+pub const clock = @import("gst/Clock.zig");
 
 /// App
-pub const appsink = @import("gst/app/appsink.zig");
-pub const appsrc = @import("gst/app/appsrc.zig");
+pub const appsink = @import("gst/app/AppSink.zig");
+pub const appsrc = @import("gst/app/AppSrc.zig");
 
 pub const GstElement = core.GstElement;
 pub const Element = element.Element;
@@ -87,10 +87,10 @@ pub const macosMainSimple = core.macosMainSimple;
 
 // Video
 pub const video = @import("gst/video/video.zig");
-pub const videoinfo = @import("gst/video/videoinfo.zig");
-pub const videoformat = @import("gst/video/videoformat.zig");
-pub const videoformatinfo = @import("gst/video/videoformatinfo.zig");
-pub const videoframe = @import("gst/video/videoframe.zig");
+pub const videoinfo = @import("gst/video/VideoInfo.zig");
+pub const videoformat = @import("gst/video/VideoFormat.zig");
+pub const videoformatinfo = @import("gst/video/VideoFormatInfo.zig");
+pub const videoframe = @import("gst/video/VideoFrame.zig");
 
 pub const VideoInfo = videoinfo.VideoInfo;
 pub const VideoFormat = videoformat.VideoFormat;

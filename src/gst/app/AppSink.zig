@@ -1,7 +1,7 @@
 const std = @import("std");
 const core = @import("../core.zig");
-const element = @import("../element.zig");
-const sample = @import("../sample.zig");
+const element = @import("../Element.zig");
+const sample = @import("../Sample.zig");
 
 pub const c = core.c;
 pub const Sample = sample.Sample;

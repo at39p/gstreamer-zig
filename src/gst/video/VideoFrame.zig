@@ -1,6 +1,6 @@
 pub const video = @import("video.zig");
-pub const VideoInfo = @import("videoinfo.zig").VideoInfo;
-pub const Buffer = @import("../buffer.zig").Buffer;
+pub const VideoInfo = @import("VideoInfo.zig").VideoInfo;
+pub const Buffer = @import("../Buffer.zig").Buffer;
 pub const core = @import("../core.zig");
 
 const c = video.c_video;

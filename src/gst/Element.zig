@@ -1,7 +1,7 @@
 const std = @import("std");
 const core = @import("core.zig");
-const caps = @import("caps.zig");
-const pad = @import("pad.zig");
+const caps = @import("Caps.zig");
+const pad = @import("Pad.zig");
 
 pub const c = core.c;
 pub const GstElement = core.GstElement;

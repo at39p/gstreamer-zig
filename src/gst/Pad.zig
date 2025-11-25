@@ -1,8 +1,8 @@
 const std = @import("std");
 const core = @import("core.zig");
-const caps = @import("caps.zig");
-const padtemplate = @import("padtemplate.zig");
-const element = @import("element.zig");
+const caps = @import("Caps.zig");
+const padtemplate = @import("PadTemplate.zig");
+const element = @import("Element.zig");
 
 pub const c = core.c;
 const GstPad = *c.GstPad;

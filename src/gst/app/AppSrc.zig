@@ -1,9 +1,9 @@
 const std = @import("std");
 const core = @import("../core.zig");
-const element = @import("../element.zig");
-const sample = @import("../sample.zig");
-const buffer = @import("../buffer.zig");
-const caps = @import("../caps.zig");
+const element = @import("../Element.zig");
+const sample = @import("../Sample.zig");
+const buffer = @import("../Buffer.zig");
+const caps = @import("../Caps.zig");
 
 pub const c = core.c;
 pub const Sample = sample.Sample;

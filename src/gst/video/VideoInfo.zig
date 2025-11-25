@@ -1,6 +1,6 @@
 pub const video = @import("video.zig");
-pub const videoFormat = @import("videoformat.zig");
-pub const caps = @import("../caps.zig");
+pub const videoFormat = @import("VideoFormat.zig");
+pub const caps = @import("../Caps.zig");
 pub const core = @import("../core.zig");
 
 const c = video.c_video;
