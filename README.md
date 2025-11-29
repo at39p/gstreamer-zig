@@ -1,6 +1,8 @@
 # gstreamer-zig
 Zig bindings for GStreamer
 
+🚧 Under construction 🚧
+
 ## Prerequisites
 
 This bindings requires GStreamer development packages to be installed on your system. [Official installation instructions](https://gstreamer.freedesktop.org/documentation/installing/index.html)
