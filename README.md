@@ -90,3 +90,7 @@ exe.linkLibC();
 exe.linkSystemLibrary2("gstreamer-1.0", .{ .use_pkg_config = .force });
 ```
 
+## Known limitations
+* Only tested on macOS
+* Still a lot of TODOs
+
