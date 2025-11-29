@@ -22,9 +22,9 @@ pub const Pipeline = struct {
         return .{ .element = .{ .ptr = @ptrCast(ptr) } };
     }
 
-    pub fn initLaunch(launch_string: [*c]const u8) !Pipeline {
+    pub fn initLaunch(launch_string: [:0]const u8) !Pipeline {
         var err: ?*c.GError = null;
-        const ptr = c.gst_parse_launch(launch_string, &err);
+        const ptr = c.gst_parse_launch(launch_string.ptr, &err);
         if (ptr == null) {
             if (err) |e| {
                 std.log.err("Failed to parse pipeline: {s}", .{e.message});
@@ -35,9 +35,9 @@ pub const Pipeline = struct {
         return .{ .element = .{ .ptr = @ptrCast(ptr) } };
     }
 
-    pub fn initLaunchFull(launch_string: [*c]const u8) !Pipeline {
+    pub fn initLaunchFull(launch_string: [:0]const u8) !Pipeline {
         var err: ?*c.GError = null;
-        const ptr = c.gst_parse_launch_full(launch_string, null, c.GstParseFlags(0), &err);
+        const ptr = c.gst_parse_launch_full(launch_string.ptr, null, c.GstParseFlags(0), &err);
         if (ptr == null) {
             if (err) |e| {
                 std.log.err("Failed to parse pipeline: {s}", .{e.message});
