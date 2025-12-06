@@ -2,7 +2,30 @@ const std = @import("std");
 const gst = @import("gst");
 const glib = gst.glib;
 
-var main_loop: ?glib.MainLoop = null;
+fn busWatcher(msg: gst.Message, loop: *glib.MainLoop) bool {
+    switch (msg.getType()) {
+        .err => {
+            _ = msg.parseErrorAndPrint() catch {
+                std.debug.print("Failed to parse error message\n", .{});
+            };
+            loop.quit();
+            return false;
+        },
+        .eos => {
+            std.debug.print("End of stream reached\n", .{});
+            loop.quit();
+            return false;
+        },
+        .state_changed => {
+            std.debug.print("State changed\n", .{});
+            return true;
+        },
+        else => {
+            std.debug.print("Got message type: {}\n", .{msg.getType()});
+            return true;
+        },
+    }
+}
 
 fn run() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -20,8 +43,8 @@ fn run() !void {
     defer gst.deinit();
 
     // Create GLib main loop
-    main_loop = try glib.MainLoop.init(null, false);
-    defer if (main_loop) |loop| loop.deinit();
+    var main_loop = try glib.MainLoop.init(null, false);
+    defer main_loop.deinit();
 
     const pipeline = try gst.Pipeline.initLaunch(args[1]);
     defer pipeline.deinit();
@@ -29,40 +52,14 @@ fn run() !void {
     const bus = try pipeline.getBus();
     defer bus.deinit();
 
-    const watch_id = try bus.addWatch(struct {
-        fn watcher(msg: gst.Message) bool {
-            switch (msg.getType()) {
-                .err => {
-                    _ = msg.parseErrorAndPrint() catch {
-                        std.debug.print("Failed to parse error message\n", .{});
-                    };
-                    main_loop.?.quit();
-                    return false;
-                },
-                .eos => {
-                    std.debug.print("End of stream reached\n", .{});
-                    main_loop.?.quit();
-                    return false;
-                },
-                .state_changed => {
-                    std.debug.print("State changed\n", .{});
-                    return true;
-                },
-                else => {
-                    std.debug.print("Got message type: {}\n", .{msg.getType()});
-                    return true;
-                },
-            }
-        }
-    }.watcher);
+    const watch_id = try bus.addWatch(busWatcher, &main_loop);
     std.debug.print("Added bus watch with ID: {}\n", .{watch_id});
 
     try pipeline.start();
     defer _ = pipeline.setState(.null_state);
 
     // Run the main loop - this blocks until quit is called
-    // gst.mainLoopRun(main_loop.?);
-    main_loop.?.run();
+    main_loop.run();
 
     std.debug.print("Main loop finished\n", .{});
 }
