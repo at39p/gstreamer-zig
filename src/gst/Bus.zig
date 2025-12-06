@@ -2,9 +2,9 @@ const std = @import("std");
 const core = @import("core.zig");
 const message = @import("Message.zig");
 
-pub const c = core.c;
-pub const GstBus = core.GstBus;
-pub const GstMessage = core.GstMessage;
+const c = core.c;
+const GstBus = core.GstBus;
+const GstMessage = core.GstMessage;
 
 pub const Bus = struct {
     ptr: GstBus,
@@ -135,32 +135,75 @@ pub const Bus = struct {
         return result;
     }
 
-    // Add a watch to the bus
-    // Usage:
-    //   bus.addWatch(handler, {}) - handler: fn(msg: Message) bool
-    //   bus.addWatch(handler, context) - handler: fn(msg: Message, ctx: ContextType) bool
-    pub fn addWatch(self: Bus, comptime handler: anytype, context: anytype) !u32 {
-        const info = @typeInfo(@TypeOf(handler));
-        if (info != .@"fn") @compileError("handler must be a function");
+    /// Add a watch callback to the bus that will be invoked for each message.
+    /// The callback should return `true` to continue watching, `false` to remove the watch.
+    ///
+    /// This follows the Zig standard library convention where context is the first
+    /// callback parameter (similar to `std.sort`).
+    ///
+    /// **With context pointer:**
+    /// ```zig
+    /// const id = try bus.addWatch(&main_loop, handleMessage);
+    ///
+    /// fn handleMessage(loop: *glib.MainLoop, msg: gst.Message) bool {
+    ///     if (msg.getType() == .eos) {
+    ///         loop.quit();
+    ///         return false;
+    ///     }
+    ///     return true;
+    /// }
+    /// ```
+    ///
+    /// **Without context (inline function):**
+    /// ```zig
+    /// const id = try bus.addWatch({}, struct {
+    ///     fn handle(_: void, msg: gst.Message) bool {
+    ///         std.debug.print("Message: {}\n", .{msg.getType()});
+    ///         return true;
+    ///     }
+    /// }.handle);
+    /// ```
+    ///
+    /// **Without context (external function):**
+    /// ```zig
+    /// const id = try bus.addWatch({}, handleMessage);
+    ///
+    /// fn handleMessage(_: void, msg: gst.Message) bool {
+    ///     return msg.getType() != .eos;
+    /// }
+    /// ```
+    pub fn addWatch(
+        self: Bus,
+        context: anytype,
+        comptime callback: fn (@TypeOf(context), message.Message) bool,
+    ) !u32 {
+        const Context = @TypeOf(context);
 
-        const param_count = info.@"fn".params.len;
-        if (param_count != 1 and param_count != 2) {
-            @compileError("handler must take 1 parameter (Message) or 2 parameters (Message, Context)");
+        comptime {
+            if (Context != void and @typeInfo(Context) != .pointer) {
+                @compileError("context must be a pointer type (e.g., *T) or void ({})");
+            }
         }
 
         const Wrapper = struct {
-            fn callback(_: [*c]c.GstBus, msg: [*c]c.GstMessage, data: ?*anyopaque) callconv(.c) c_int {
-                const wrapped_msg = message.Message{ .ptr = msg };
-                const result = if (param_count == 1)
-                    handler(wrapped_msg)
-                else
-                    handler(wrapped_msg, @as(@TypeOf(context), @ptrCast(@alignCast(data))));
+            fn cCallback(
+                _: [*c]c.GstBus,
+                msg: [*c]c.GstMessage,
+                user_data: ?*anyopaque,
+            ) callconv(.c) c_int {
+                const ctx: Context = if (Context == void) {} else @ptrCast(@alignCast(user_data));
+
+                const result = callback(ctx, message.Message{ .ptr = msg });
                 return if (result) 1 else 0;
             }
         };
 
-        const user_data = if (param_count == 1) null else context;
-        const source_id = c.gst_bus_add_watch(self.ptr, Wrapper.callback, user_data);
+        const user_data: ?*anyopaque = if (Context == void)
+            null
+        else
+            @ptrCast(@constCast(context));
+
+        const source_id = c.gst_bus_add_watch(self.ptr, Wrapper.cCallback, user_data);
         if (source_id == 0) return error.AddWatchToBusFailed;
 
         return source_id;

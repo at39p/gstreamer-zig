@@ -2,31 +2,6 @@ const std = @import("std");
 const gst = @import("gst");
 const glib = gst.glib;
 
-fn busWatcher(msg: gst.Message, loop: *glib.MainLoop) bool {
-    switch (msg.getType()) {
-        .err => {
-            _ = msg.parseErrorAndPrint() catch {
-                std.debug.print("Failed to parse error message\n", .{});
-            };
-            loop.quit();
-            return false;
-        },
-        .eos => {
-            std.debug.print("End of stream reached\n", .{});
-            loop.quit();
-            return false;
-        },
-        .state_changed => {
-            std.debug.print("State changed\n", .{});
-            return true;
-        },
-        else => {
-            std.debug.print("Got message type: {}\n", .{msg.getType()});
-            return true;
-        },
-    }
-}
-
 fn run() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -52,7 +27,32 @@ fn run() !void {
     const bus = try pipeline.getBus();
     defer bus.deinit();
 
-    const watch_id = try bus.addWatch(busWatcher, &main_loop);
+    const watch_id = try bus.addWatch(&main_loop, struct {
+        fn handle(loop: *glib.MainLoop, msg: gst.Message) bool {
+            switch (msg.getType()) {
+                .err => {
+                    _ = msg.parseErrorAndPrint() catch {
+                        std.debug.print("Failed to parse error message\n", .{});
+                    };
+                    loop.quit();
+                    return false;
+                },
+                .eos => {
+                    std.debug.print("End of stream reached\n", .{});
+                    loop.quit();
+                    return false;
+                },
+                .state_changed => {
+                    std.debug.print("State changed\n", .{});
+                    return true;
+                },
+                else => {
+                    std.debug.print("Got message type: {}\n", .{msg.getType()});
+                    return true;
+                },
+            }
+        }
+    }.handle);
     std.debug.print("Added bus watch with ID: {}\n", .{watch_id});
 
     try pipeline.start();
