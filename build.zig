@@ -68,7 +68,7 @@ pub fn build(b: *std.Build) void {
 
     for (examples) |example| {
         const exe_name = std.fmt.allocPrint(b.allocator, "{s}-example", .{example.name}) catch @panic("OOM");
-        const source_path = std.fmt.allocPrint(b.allocator, "src/examples/{s}", .{example.file}) catch @panic("OOM");
+        const source_path = std.fmt.allocPrint(b.allocator, "examples/{s}", .{example.file}) catch @panic("OOM");
         const step_name = std.fmt.allocPrint(b.allocator, "run-{s}", .{example.name}) catch @panic("OOM");
 
         const example_exe = b.addExecutable(.{
