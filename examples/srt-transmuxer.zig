@@ -65,7 +65,7 @@ fn run() !void {
         .property("max-lateness", -1)
         .build();
 
-    try pipeline.addMany(&[_]gst.Element{ source, demuxer, parse, payloader, sink });
+    try pipeline.addMany(&.{ source, demuxer, parse, payloader, sink });
 
     var context = contextData{
         .queue = queues.items[1],
@@ -78,7 +78,7 @@ fn run() !void {
     try queues.items[0].link(demuxer);
 
     // Link elements after demuxer (will be connected via pad-added callback)
-    try queues.items[1].linkMany(&[_]gst.Element{ parse, queues.items[2], payloader, queues.items[3], sink });
+    try queues.items[1].linkMany(&.{ parse, queues.items[2], payloader, queues.items[3], sink });
 
     try pipeline.start();
 

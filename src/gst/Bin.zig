@@ -111,33 +111,32 @@ pub const Bin = struct {
     pub fn asElement(self: Bin) Element {
         return Element{ .ptr = @ptrCast(self.ptr) };
     }
+
+    pub fn addMany(self: Bin, elements: []const Element) !void {
+        for (elements) |el| {
+            try self.add(el);
+        }
+    }
+
+    pub fn removeMany(self: Bin, elements: []const Element) !void {
+        for (elements) |el| {
+            try self.remove(el);
+        }
+    }
+
+    pub fn fromDescription(bin_description: [*:0]const u8, ghost_unlinked_pads: bool) !Bin {
+        var err: ?*c.GError = null;
+        const element_ptr = c.gst_parse_bin_from_description(bin_description, if (ghost_unlinked_pads) 1 else 0, &err);
+
+        if (err) |e| {
+            c.g_error_free(e);
+            return error.ParseError;
+        }
+
+        if (element_ptr == null) {
+            return error.BinCreationFailed;
+        }
+
+        return Bin{ .ptr = @ptrCast(element_ptr) };
+    }
 };
-
-// TODO: These are unreachable. Should they be reachable or removed?
-pub fn addMany(bin: Bin, elements: []const Element) !void {
-    for (elements) |el| {
-        try bin.add(el);
-    }
-}
-
-pub fn removeMany(bin: Bin, elements: []const Element) !void {
-    for (elements) |el| {
-        try bin.remove(el);
-    }
-}
-
-pub fn fromDescription(bin_description: [*:0]const u8, ghost_unlinked_pads: bool) !Bin {
-    var err: ?*c.GError = null;
-    const element_ptr = c.gst_parse_bin_from_description(bin_description, if (ghost_unlinked_pads) 1 else 0, &err);
-
-    if (err) |e| {
-        c.g_error_free(e);
-        return error.ParseError;
-    }
-
-    if (element_ptr == null) {
-        return error.BinCreationFailed;
-    }
-
-    return Bin{ .ptr = @ptrCast(element_ptr) };
-}

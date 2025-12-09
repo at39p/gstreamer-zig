@@ -119,8 +119,8 @@ fn run() !void {
     const autovideosink = try gst.Element.init("autovideosink", "sink");
 
     // Add elements to pipeline and link them
-    try pipeline.addMany(&[_]gst.Element{ appsrc.asElement(), videoconvert, autovideosink });
-    try gst.element.linkMany(&[_]gst.Element{ appsrc.asElement(), videoconvert, autovideosink });
+    try pipeline.addMany(&.{ appsrc.asElement(), videoconvert, autovideosink });
+    try gst.element.linkMany(&.{ appsrc.asElement(), videoconvert, autovideosink });
 
     try pipeline.start();
 
