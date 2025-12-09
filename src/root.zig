@@ -1,6 +1,5 @@
 pub const core = @import("gst/core.zig");
 pub const errors = @import("gst/errors.zig");
-pub const properties = @import("gst/properties.zig");
 
 // Expose GLib as a separate "namespace"
 pub const glib = @import("glib/glib.zig");
