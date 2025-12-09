@@ -230,7 +230,7 @@ pub const UriType = enum(c_uint) {
     src = 2,
 };
 
-pub const ElementFactory = struct {
+const ElementFactory = struct {
     factory_name: [*:0]const u8,
     element_name: ?[*:0]const u8,
     properties: std.array_list.Managed(Property),
@@ -253,7 +253,7 @@ pub const ElementFactory = struct {
         enum_val: c_int,
     };
 
-    pub fn init(factory_name: [*:0]const u8) ElementFactory {
+    fn init(factory_name: [*:0]const u8) ElementFactory {
         return .{
             .factory_name = factory_name,
             .element_name = factory_name, // If no name was provided, just use factory_name
