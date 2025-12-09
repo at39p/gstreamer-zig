@@ -148,14 +148,14 @@ pub const VideoFrame = struct {
     }
 };
 
-pub const VideoFrameFlags = packed struct {
+pub const VideoFrameFlags = packed struct(u32) {
     interlaced: bool = false,
     tff: bool = false,
     rff: bool = false,
     onefield: bool = false,
     multiple_view: bool = false,
     first_in_bundle: bool = false,
-    _padding: u26 = 0, // Makes sure it's exactly 32 bits
+    _: u26 = 0, // Unused padding
 
     pub fn fromInt(value: u32) VideoFrameFlags {
         return @bitCast(value);
