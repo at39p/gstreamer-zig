@@ -240,11 +240,5 @@ pub const Bus = struct {
     }
 };
 
-// Function pointer type for bus watch callback
-pub const BusFunc = *const fn (bus: [*c]c.GstBus, msg: [*c]c.GstMessage, user_data: ?*anyopaque) callconv(.c) c_int;
-
 // Sync handler function type
 pub const BusSyncHandler = *const fn (bus: [*c]c.GstBus, msg: [*c]c.GstMessage, user_data: ?*anyopaque) callconv(.c) c.GstBusSyncReply;
-
-// Callback type for addWatch
-pub const MessageHandler = *const fn (msg: message.Message) bool;
