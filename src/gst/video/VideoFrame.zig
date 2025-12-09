@@ -6,16 +6,6 @@ pub const core = @import("../core.zig");
 const c = video.c_video;
 const std = @import("std");
 
-pub const VideoFrameFlags = enum(u32) {
-    none = 0,
-    interlaced = 1,
-    tff = 2,
-    rff = 4,
-    onefield = 8,
-    multiple_view = 16,
-    first_in_bundle = 32,
-};
-
 pub const VideoFrame = struct {
     ptr: c.GstVideoFrame,
 
@@ -77,7 +67,7 @@ pub const VideoFrame = struct {
     }
 
     pub fn getFlags(self: *const VideoFrame) VideoFrameFlags {
-        return VideoFrameFlags.fromC(self.ptr.flags);
+        return VideoFrameFlags.fromInt(self.ptr.flags);
     }
 
     pub fn getNPlanes(self: *const VideoFrame) u32 {
@@ -155,5 +145,23 @@ pub const VideoFrame = struct {
 
     pub fn getBuffer(self: *const VideoFrame) Buffer {
         return Buffer{ .ptr = self.ptr.buffer };
+    }
+};
+
+pub const VideoFrameFlags = packed struct {
+    interlaced: bool = false,
+    tff: bool = false,
+    rff: bool = false,
+    onefield: bool = false,
+    multiple_view: bool = false,
+    first_in_bundle: bool = false,
+    _padding: u26 = 0, // Makes sure it's exactly 32 bits
+
+    pub fn fromInt(value: u32) VideoFrameFlags {
+        return @bitCast(value);
+    }
+
+    pub fn toInt(self: VideoFrameFlags) u32 {
+        return @bitCast(self);
     }
 };
