@@ -1,8 +1,26 @@
 const std = @import("std");
 const core = @import("core.zig");
 
-pub const c = core.c;
-pub const GstClock = core.GstClock;
+const c = core.c;
+const GstClock = core.GstClock;
+
+pub const TIME_NONE: u64 = c.GST_CLOCK_TIME_NONE;
+
+pub const Return = enum(c_int) {
+    ok = c.GST_CLOCK_OK,
+    early = c.GST_CLOCK_EARLY,
+    unscheduled = c.GST_CLOCK_UNSCHEDULED,
+    busy = c.GST_CLOCK_BUSY,
+    badtime = c.GST_CLOCK_BADTIME,
+    @"error" = c.GST_CLOCK_ERROR,
+    unsupported = c.GST_CLOCK_UNSUPPORTED,
+    done = c.GST_CLOCK_DONE,
+};
+
+pub const EntryType = enum(c_int) {
+    single = c.GST_CLOCK_ENTRY_SINGLE,
+    periodic = c.GST_CLOCK_ENTRY_PERIODIC,
+};
 
 pub const Clock = struct {
     ptr: GstClock,
@@ -12,10 +30,10 @@ pub const Clock = struct {
     }
 
     /// Get the current time of the clock in nanoseconds
-    /// Returns null if the clock is invalid or not synchronized (GST_CLOCK_TIME_NONE)
+    /// Returns null if the clock is invalid or not synchronized
     pub inline fn getTime(self: Clock) ?u64 {
         const time = c.gst_clock_get_time(self.ptr);
-        if (time == c.GST_CLOCK_TIME_NONE) {
+        if (time == TIME_NONE) {
             return null;
         }
         return time;

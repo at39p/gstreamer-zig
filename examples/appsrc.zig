@@ -127,47 +127,21 @@ fn run() !void {
     const bus = try pipeline.getBus();
     defer bus.deinit();
 
-    // Wait for EOS or error
-    var running = true;
-    while (running) {
-        const msg = bus.popMessage(std.time.ns_per_ms * 10, .any);
-        if (msg) |message| {
-            defer message.deinit();
-
-            const msg_type = message.getType();
-            switch (msg_type) {
-                .eos => {
-                    std.debug.print("End of stream reached\n", .{});
-                    running = false;
-                },
-                .err => {
-                    const is_quit = message.parseErrorAndPrint() catch {
-                        std.debug.print("Unknown error occurred\n", .{});
-                        running = false;
-                        continue;
-                    };
-                    if (is_quit) {
-                        std.debug.print("Gracefully shutting down...\n", .{});
-                    }
-                    running = false;
-                },
-                .warning => {
-                    // Handle warnings if needed
-                },
-                .state_changed => {
-                    // Optionally handle state changes
-                },
-                .info => {
-                    // Handle info messages if needed
-                },
-                else => {
-                    // Handle other messages if needed
-                },
-            }
+    while (bus.timedPop(gst.clock.TIME_NONE)) |message| {
+        defer message.deinit();
+        switch (message.getType()) {
+            .eos => {
+                std.debug.print("End of stream reached\n", .{});
+                break;
+            },
+            .err => {
+                _ = message.parseErrorAndPrint() catch {
+                    std.debug.print("Unknown error occurred\n", .{});
+                };
+                break;
+            },
+            else => {},
         }
-
-        // Add a small delay to prevent busy waiting
-        std.Thread.sleep(std.time.ns_per_ms * 10);
     }
 
     // Cleanup

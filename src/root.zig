@@ -12,6 +12,7 @@ pub const element = @import("gst/Element.zig");
 pub const caps = @import("gst/Caps.zig");
 pub const stream = @import("gst/Stream.zig");
 pub const fraction = @import("gst/Fraction.zig");
+pub const clock = @import("gst/Clock.zig");
 
 // Primary types - imported directly for convenience
 pub const Element = element.Element;
@@ -26,7 +27,7 @@ pub const Fraction = fraction.Fraction;
 pub const Pad = @import("gst/Pad.zig").Pad;
 pub const Stream = stream.Stream;
 pub const StreamCollection = stream.StreamCollection;
-pub const Clock = @import("gst/Clock.zig").Clock;
+pub const Clock = clock.Clock;
 pub const Sample = @import("gst/Sample.zig").Sample;
 pub const Buffer = @import("gst/Buffer.zig").Buffer;
 

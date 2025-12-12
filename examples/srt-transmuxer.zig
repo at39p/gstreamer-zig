@@ -85,53 +85,24 @@ fn run() !void {
     const bus = try pipeline.getBus();
     defer bus.deinit();
 
-    // Wait for EOS or error
-    var running = true;
     std.debug.print("Starting message loop...\n", .{});
 
-    while (running) {
-        const msg = bus.popMessage(std.time.ns_per_ms * 100, .any);
-        if (msg) |message| {
-            defer message.deinit();
-
-            const msg_type = message.getType();
-            std.debug.print("Received message: {}\n", .{msg_type});
-
-            switch (msg_type) {
-                .eos => {
-                    std.debug.print("End of stream reached\n", .{});
-                    running = false;
-                },
-                .err => {
-                    const is_quit = message.parseErrorAndPrint() catch {
-                        std.debug.print("Unknown error occurred\n", .{});
-                        running = false;
-                        continue;
-                    };
-                    if (is_quit) {
-                        std.debug.print("Gracefully shutting down...\n", .{});
-                    }
-                    running = false;
-                },
-                .warning => {
-                    std.debug.print("Warning message received\n", .{});
-                },
-                .state_changed => {
-                    std.debug.print("State changed message received\n", .{});
-                },
-                .info => {
-                    std.debug.print("Info message received\n", .{});
-                },
-                else => {
-                    std.debug.print("Other message type: {}\n", .{msg_type});
-                },
-            }
-        } else {
-            std.debug.print(".", .{});
+    while (bus.timedPop(gst.clock.TIME_NONE)) |message| {
+        defer message.deinit();
+        std.debug.print("Received message: {}\n", .{message.getType()});
+        switch (message.getType()) {
+            .eos => {
+                std.debug.print("End of stream reached\n", .{});
+                break;
+            },
+            .err => {
+                _ = message.parseErrorAndPrint() catch {
+                    std.debug.print("Unknown error occurred\n", .{});
+                };
+                break;
+            },
+            else => {},
         }
-
-        // Add a small delay to prevent busy waiting
-        std.Thread.sleep(std.time.ns_per_ms * 10);
     }
 
     // Cleanup
