@@ -1,10 +1,18 @@
 const std = @import("std");
 const core = @import("core.zig");
+const Buffer = @import("Buffer.zig").Buffer;
 
 pub const c = core.c;
 
 pub const Sample = struct {
     ptr: *c.GstSample,
+
+    pub fn fromPtr(ptr: ?*c.GstSample) ?Sample {
+        if (ptr) |p| {
+            return Sample{ .ptr = p };
+        }
+        return null;
+    }
 
     pub fn deinit(self: Sample) void {
         c.gst_sample_unref(self.ptr);
@@ -51,8 +59,12 @@ pub const Sample = struct {
         return null;
     }
 
-    pub inline fn getBuffer(self: Sample) ?*c.GstBuffer {
-        return c.gst_sample_get_buffer(self.ptr);
+    pub inline fn getBuffer(self: Sample) ?Buffer {
+        const buf = c.gst_sample_get_buffer(self.ptr);
+        if (buf) |b| {
+            return Buffer{ .ptr = b };
+        }
+        return null;
     }
 
     pub inline fn getCaps(self: Sample) ?*c.GstCaps {
