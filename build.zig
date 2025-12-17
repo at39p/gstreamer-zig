@@ -62,6 +62,7 @@ pub fn build(b: *std.Build) void {
     const examples = [_]struct { name: []const u8, file: []const u8, description: []const u8, skip_install: bool = false }{
         .{ .name = "launch", .file = "launch.zig", .description = "Run the launch example" },
         .{ .name = "appsrc", .file = "appsrc.zig", .description = "Run the appsrc example" },
+        .{ .name = "appsink", .file = "appsink.zig", .description = "Run the appsink example" },
         .{ .name = "srt", .file = "srt-transmuxer.zig", .description = "Run srt transmuxer example", .skip_install = true },
         .{ .name = "bins", .file = "bins.zig", .description = "Run the bins example", .skip_install = true },
     };
