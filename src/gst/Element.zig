@@ -38,13 +38,21 @@ pub const Element = struct {
         }
     }
 
-    pub fn linkMany(self: Element, elements: []const Element) !void {
+    pub fn linkToMany(self: Element, elements: []const Element) !void {
         if (elements.len == 0) return;
 
         // Link self to first element
         try self.link(elements[0]);
 
         // Link remaining elements in sequence
+        for (elements[0 .. elements.len - 1], elements[1..]) |current, next| {
+            try current.link(next);
+        }
+    }
+
+    pub fn linkMany(elements: []const Element) !void {
+        if (elements.len < 2) return;
+
         for (elements[0 .. elements.len - 1], elements[1..]) |current, next| {
             try current.link(next);
         }
@@ -340,11 +348,3 @@ const ElementFactory = struct {
         self.properties.deinit();
     }
 };
-
-pub fn linkMany(elements: []const Element) !void {
-    if (elements.len < 2) return;
-
-    for (elements[0 .. elements.len - 1], elements[1..]) |current, next| {
-        try current.link(next);
-    }
-}

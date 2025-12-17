@@ -8,15 +8,16 @@ pub const glib = @import("glib/glib.zig");
 pub const c = core.c;
 
 // Module namespaces (for accessing module-level functions and multiple exports)
-pub const element = @import("gst/Element.zig");
 pub const caps = @import("gst/Caps.zig");
 pub const stream = @import("gst/Stream.zig");
 pub const fraction = @import("gst/Fraction.zig");
 pub const clock = @import("gst/Clock.zig");
 
 // Primary types - imported directly for convenience
+const element = @import("gst/Element.zig");
 pub const Element = element.Element;
 pub const UriType = element.UriType;
+
 pub const Pipeline = @import("gst/Pipeline.zig").Pipeline;
 pub const Bin = @import("gst/Bin.zig").Bin;
 pub const Bus = @import("gst/Bus.zig").Bus;
