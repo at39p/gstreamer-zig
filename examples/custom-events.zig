@@ -85,7 +85,11 @@ fn run() !void {
 
     // Setup pad probe to intercept events
     const sink = pipeline.getByName("sink") orelse return error.ElementNotFound;
+    defer sink.deinit();
+
     const sink_pad = sink.getStaticPad("sink") orelse return error.PadNotFound;
+    defer sink_pad.deinit();
+
     _ = sink_pad.addProbe(gst.PadProbeType.event_downstream, probeCallback, null);
 
     // Start pipeline
