@@ -98,7 +98,9 @@ pub const PadProbeInfo = struct {
         const data = self.ptr.*.data;
         if (data == null) return null;
         const probe_type = self.getType();
-        if (!probe_type.contains(PadProbeType.event_downstream) and !probe_type.contains(PadProbeType.event_upstream)) return null;
+        if (!probe_type.contains(PadProbeType.event_downstream) and
+            !probe_type.contains(PadProbeType.event_upstream) and
+            !probe_type.contains(PadProbeType.event_flush)) return null;
         return Event{ .ptr = @ptrCast(@alignCast(data)) };
     }
 
