@@ -65,6 +65,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "appsink", .file = "appsink.zig", .description = "Run the appsink example" },
         .{ .name = "srt", .file = "srt-transmuxer.zig", .description = "Run srt transmuxer example", .skip_install = true },
         .{ .name = "bins", .file = "bins.zig", .description = "Run the bins example", .skip_install = true },
+        .{ .name = "custom-events", .file = "custom-events.zig", .description = "Run the custom events example", .skip_install = true },
     };
 
     for (examples) |example| {

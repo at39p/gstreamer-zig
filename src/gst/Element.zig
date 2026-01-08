@@ -2,6 +2,7 @@ const std = @import("std");
 const core = @import("core.zig");
 const caps = @import("Caps.zig");
 const pad = @import("Pad.zig");
+const Event = @import("Event.zig").Event;
 
 pub const c = core.c;
 pub const GstElement = core.GstElement;
@@ -229,6 +230,12 @@ pub const Element = struct {
             return error.PadRequestFailed;
         }
         return currentPad;
+    }
+
+    pub fn sendEvent(self: Element, event: Event) !void {
+        if (c.gst_element_send_event(self.ptr, event.ptr) == 0) {
+            return error.SendEventFailed;
+        }
     }
 };
 

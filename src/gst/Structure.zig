@@ -6,7 +6,7 @@ pub const GstStructure = core.GstStructure;
 pub const Fraction = @import("Fraction.zig").Fraction;
 
 pub const Structure = struct {
-    ptr: *GstStructure,
+    ptr: GstStructure,
 
     // Constructor functions
     pub fn init(name: [*:0]const u8) !Structure {

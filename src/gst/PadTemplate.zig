@@ -2,7 +2,7 @@ const std = @import("std");
 const core = @import("core.zig");
 const caps = @import("Caps.zig");
 
-pub const c = core.c;
+const c = core.c;
 const Caps = caps.Caps;
 
 pub const PadDirection = enum(c_uint) {
