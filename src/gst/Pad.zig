@@ -296,7 +296,7 @@ pub const Pad = struct {
             .pointer => @ptrCast(@constCast(user_data)),
             .null => null,
             .optional => if (user_data) |ud| @ptrCast(@constCast(ud)) else null,
-            else => null,
+            else => @compileError("user_data must be a pointer, optional pointer, or null"),
         };
 
         const id = c.gst_pad_add_probe(self.ptr, mask.toInt(), wrapper, converted_user_data, null);
