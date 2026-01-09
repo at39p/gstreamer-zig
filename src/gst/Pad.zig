@@ -3,14 +3,115 @@ const core = @import("core.zig");
 const caps = @import("Caps.zig");
 const padtemplate = @import("PadTemplate.zig");
 const element = @import("Element.zig");
+const buffer = @import("Buffer.zig");
+const event = @import("Event.zig");
 
-pub const c = core.c;
+const c = core.c;
 const GstPad = *c.GstPad;
 const Caps = caps.Caps;
 const Element = element.Element;
+const Buffer = buffer.Buffer;
+pub const Event = event.Event;
+pub const EventType = event.EventType;
 
 pub const PadDirection = padtemplate.PadDirection;
 pub const PadTemplate = padtemplate.PadTemplate;
+
+pub const PadProbeReturn = enum(c_uint) {
+    drop = c.GST_PAD_PROBE_DROP,
+    ok = c.GST_PAD_PROBE_OK,
+    remove = c.GST_PAD_PROBE_REMOVE,
+    pass = c.GST_PAD_PROBE_PASS,
+    handled = c.GST_PAD_PROBE_HANDLED,
+};
+
+pub const PadProbeType = struct {
+    value: c_uint,
+
+    // Individual flags
+    pub const idle = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_IDLE };
+    pub const block = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_BLOCK };
+    pub const buffer = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_BUFFER };
+    pub const buffer_list = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_BUFFER_LIST };
+    pub const event_downstream = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM };
+    pub const event_upstream = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_EVENT_UPSTREAM };
+    pub const event_flush = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_EVENT_FLUSH };
+    pub const query_downstream = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM };
+    pub const query_upstream = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_QUERY_UPSTREAM };
+    pub const push = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_PUSH };
+    pub const pull = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_PULL };
+
+    // Common flag combinations
+    pub const blocking = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_BLOCKING };
+    pub const data_downstream = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM };
+    pub const data_upstream = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_DATA_UPSTREAM };
+    pub const data_both = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_DATA_BOTH };
+    pub const block_downstream = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM };
+    pub const block_upstream = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_BLOCK_UPSTREAM };
+    pub const event_both = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_EVENT_BOTH };
+    pub const query_both = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_QUERY_BOTH };
+    pub const all_both = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_ALL_BOTH };
+    pub const scheduling = PadProbeType{ .value = c.GST_PAD_PROBE_TYPE_SCHEDULING };
+
+    // Methods for combining flags
+    pub fn bitwiseOr(self: PadProbeType, other: PadProbeType) PadProbeType {
+        return .{ .value = self.value | other.value };
+    }
+
+    pub fn bitwiseAnd(self: PadProbeType, other: PadProbeType) PadProbeType {
+        return .{ .value = self.value & other.value };
+    }
+
+    pub fn contains(self: PadProbeType, other: PadProbeType) bool {
+        return (self.value & other.value) == other.value;
+    }
+
+    pub fn toInt(self: PadProbeType) c_uint {
+        return self.value;
+    }
+
+    pub fn fromInt(value: c_uint) PadProbeType {
+        return .{ .value = value };
+    }
+};
+
+pub const PadProbeInfo = struct {
+    ptr: *c.GstPadProbeInfo,
+
+    pub fn getType(self: PadProbeInfo) PadProbeType {
+        return PadProbeType.fromInt(self.ptr.*.type);
+    }
+
+    pub fn getId(self: PadProbeInfo) u64 {
+        return self.ptr.*.id;
+    }
+
+    pub fn getBuffer(self: PadProbeInfo) ?Buffer {
+        const data = self.ptr.*.data;
+        if (data == null) return null;
+        const probe_type = self.getType();
+        if (!probe_type.contains(PadProbeType.buffer)) return null;
+        return Buffer{ .ptr = @ptrCast(@alignCast(data)) };
+    }
+
+    pub fn getEvent(self: PadProbeInfo) ?Event {
+        const data = self.ptr.*.data;
+        if (data == null) return null;
+        const probe_type = self.getType();
+        if (!probe_type.contains(PadProbeType.event_downstream) and
+            !probe_type.contains(PadProbeType.event_upstream) and
+            !probe_type.contains(PadProbeType.event_flush)) return null;
+        return Event{ .ptr = @ptrCast(@alignCast(data)) };
+    }
+
+    pub fn getOffset(self: PadProbeInfo) u64 {
+        return self.ptr.*.offset;
+    }
+
+    pub fn getSize(self: PadProbeInfo) u32 {
+        return self.ptr.*.size;
+    }
+};
 
 pub const Pad = struct {
     ptr: GstPad,
@@ -147,10 +248,64 @@ pub const Pad = struct {
         c.gst_pad_set_offset(self.ptr, offset);
     }
 
-    // Name functions
     pub fn getName(self: Pad) ?[]const u8 {
         const name = c.gst_pad_get_name(self.ptr);
         if (name == null) return null;
         return std.mem.span(name);
+    }
+
+    pub fn addProbe(self: Pad, mask: PadProbeType, comptime callback_fn: anytype, user_data: anytype) u64 {
+        const CallbackType = @TypeOf(callback_fn);
+        const callback_info = @typeInfo(CallbackType);
+
+        if (callback_info != .@"fn") {
+            @compileError("callback_fn must be a function");
+        }
+
+        const params = callback_info.@"fn".params;
+        if (params.len < 2 or params.len > 3) {
+            @compileError("callback must have 2 or 3 parameters: (Pad, PadProbeInfo) or (Pad, PadProbeInfo, user_data)");
+        }
+
+        const UserDataType = @TypeOf(user_data);
+
+        const wrapper = struct {
+            fn c_wrapper(pad_ptr: ?*c.GstPad, info_ptr: ?*c.GstPadProbeInfo, data: ?*anyopaque) callconv(.c) c.GstPadProbeReturn {
+                if (pad_ptr == null or info_ptr == null) {
+                    return c.GST_PAD_PROBE_OK;
+                }
+
+                const pad = Pad{ .ptr = pad_ptr.? };
+                const info = PadProbeInfo{ .ptr = info_ptr.? };
+
+                const result = if (params.len == 2) blk: {
+                    break :blk callback_fn(pad, info);
+                } else blk: {
+                    const typed_data: UserDataType = if (@typeInfo(UserDataType) == .pointer)
+                        @ptrCast(@alignCast(data))
+                    else if (@typeInfo(UserDataType) == .optional)
+                        if (data) |d| @as(UserDataType, @ptrCast(@alignCast(d))) else null
+                    else
+                        @compileError("user_data must be a pointer type");
+                    break :blk callback_fn(pad, info, typed_data);
+                };
+
+                return @intFromEnum(result);
+            }
+        }.c_wrapper;
+
+        const converted_user_data: ?*anyopaque = switch (@typeInfo(UserDataType)) {
+            .pointer => @ptrCast(@constCast(user_data)),
+            .null => null,
+            .optional => if (user_data) |ud| @ptrCast(@constCast(ud)) else null,
+            else => @compileError("user_data must be a pointer, optional pointer, or null"),
+        };
+
+        const id = c.gst_pad_add_probe(self.ptr, mask.toInt(), wrapper, converted_user_data, null);
+        return @intCast(id);
+    }
+
+    pub fn removeProbe(self: Pad, id: u64) void {
+        c.gst_pad_remove_probe(self.ptr, @intCast(id));
     }
 };

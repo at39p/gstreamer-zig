@@ -2,6 +2,7 @@ const std = @import("std");
 const core = @import("core.zig");
 const caps = @import("Caps.zig");
 const pad = @import("Pad.zig");
+const Event = @import("Event.zig").Event;
 
 pub const c = core.c;
 pub const GstElement = core.GstElement;
@@ -38,13 +39,21 @@ pub const Element = struct {
         }
     }
 
-    pub fn linkMany(self: Element, elements: []const Element) !void {
+    pub fn linkToMany(self: Element, elements: []const Element) !void {
         if (elements.len == 0) return;
 
         // Link self to first element
         try self.link(elements[0]);
 
         // Link remaining elements in sequence
+        for (elements[0 .. elements.len - 1], elements[1..]) |current, next| {
+            try current.link(next);
+        }
+    }
+
+    pub fn linkMany(elements: []const Element) !void {
+        if (elements.len < 2) return;
+
         for (elements[0 .. elements.len - 1], elements[1..]) |current, next| {
             try current.link(next);
         }
@@ -222,6 +231,12 @@ pub const Element = struct {
         }
         return currentPad;
     }
+
+    pub fn sendEvent(self: Element, event: Event) !void {
+        if (c.gst_element_send_event(self.ptr, event.ptr) == 0) {
+            return error.SendEventFailed;
+        }
+    }
 };
 
 pub const UriType = enum(c_uint) {
@@ -340,11 +355,3 @@ const ElementFactory = struct {
         self.properties.deinit();
     }
 };
-
-pub fn linkMany(elements: []const Element) !void {
-    if (elements.len < 2) return;
-
-    for (elements[0 .. elements.len - 1], elements[1..]) |current, next| {
-        try current.link(next);
-    }
-}

@@ -4,6 +4,7 @@ const element = @import("Element.zig");
 const bus = @import("Bus.zig");
 
 const Clock = @import("Clock.zig").Clock;
+const Event = @import("Event.zig").Event;
 
 pub const c = core.c;
 pub const State = core.State;
@@ -117,5 +118,9 @@ pub const Pipeline = struct {
         } else {
             return error.ClockNotFound;
         }
+    }
+
+    pub fn sendEvent(self: Pipeline, event: Event) !void {
+        return self.element.sendEvent(event);
     }
 };

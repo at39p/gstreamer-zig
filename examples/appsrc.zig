@@ -120,7 +120,7 @@ fn run() !void {
 
     // Add elements to pipeline and link them
     try pipeline.addMany(&.{ appsrc.asElement(), videoconvert, autovideosink });
-    try gst.element.linkMany(&.{ appsrc.asElement(), videoconvert, autovideosink });
+    try gst.Element.linkMany(&.{ appsrc.asElement(), videoconvert, autovideosink });
 
     try pipeline.start();
 
