@@ -271,12 +271,8 @@ pub const Pad = struct {
 
         const wrapper = struct {
             fn c_wrapper(pad_ptr: ?*c.GstPad, info_ptr: ?*c.GstPadProbeInfo, data: ?*anyopaque) callconv(.c) c.GstPadProbeReturn {
-                if (pad_ptr == null or info_ptr == null) {
-                    return c.GST_PAD_PROBE_OK;
-                }
-
-                const pad = Pad{ .ptr = pad_ptr.? };
-                const info = PadProbeInfo{ .ptr = info_ptr.? };
+                const pad = Pad{ .ptr = pad_ptr orelse @panic("Pad probe callback received null pad_ptr - GStreamer contract violation") };
+                const info = PadProbeInfo{ .ptr = info_ptr orelse @panic("Pad probe callback received null info_ptr - GStreamer contract violation") };
 
                 const result = if (params.len == 2) blk: {
                     break :blk callback_fn(pad, info);
