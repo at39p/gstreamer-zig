@@ -24,7 +24,8 @@ fn onNeedData(appsrc: *gst.AppSrc, length: u32, context: *contextData) void {
     const b: u8 = if (frame_count % 5 == 0) 0 else 255;
 
     const buffer = gst.Buffer.init(context.video_info.getSize());
-    if (buffer) |buf| {
+    if (buffer) |buffer_value| {
+        var buf = buffer_value;
         buf.setPts(frame_count * 500 * gst.MSECOND);
 
         var vframe = gst.VideoFrame.fromBufferWritable(buf, context.video_info) catch |err| {
@@ -66,7 +67,7 @@ fn onNeedData(appsrc: *gst.AppSrc, length: u32, context: *contextData) void {
             }
         }
 
-        appsrc.pushBuffer(buf) catch |err| {
+        appsrc.pushBuffer(&buf) catch |err| {
             std.debug.print("Failed to push buffer: {}\n", .{err});
         };
     }

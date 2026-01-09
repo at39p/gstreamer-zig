@@ -42,14 +42,19 @@ pub const MessageType = enum(c_int) {
 };
 
 pub const Message = struct {
-    ptr: GstMessage,
+    ptr: ?GstMessage,
 
     pub fn deinit(self: Message) void {
-        c.gst_message_unref(self.ptr);
+        if (self.ptr) |p| {
+            c.gst_message_unref(p);
+        } else {
+            std.log.warn("Message.deinit() called on already-consumed Message (this is safe but unnecessary - GStreamer already freed it)", .{});
+        }
     }
 
     pub fn getType(self: Message) MessageType {
-        const raw_type = self.ptr.*.type;
+        const ptr = self.ptr orelse @panic("Message.getType() called on consumed Message - cannot get type of a message that was already passed to a function taking ownership");
+        const raw_type = ptr.*.type;
         return std.meta.intToEnum(MessageType, raw_type) catch {
             std.debug.print("Unknown message type: {}\n", .{raw_type});
             return MessageType.unknown;
@@ -57,10 +62,11 @@ pub const Message = struct {
     }
 
     pub fn parseErrorAndPrint(self: Message) !bool {
+        const ptr = self.ptr orelse @panic("Message.parseErrorAndPrint() called on consumed Message - cannot parse a message that was already passed to a function taking ownership");
         var err: ?*c.GError = null;
         var debug: [*c]u8 = null;
 
-        c.gst_message_parse_error(self.ptr, &err, &debug);
+        c.gst_message_parse_error(ptr, &err, &debug);
 
         if (err) |e| {
             defer c.g_error_free(e);

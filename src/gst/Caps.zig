@@ -6,7 +6,7 @@ pub const GstCaps = core.GstCaps;
 pub const Fraction = @import("Fraction.zig").Fraction;
 
 pub const Caps = struct {
-    ptr: GstCaps,
+    ptr: ?GstCaps,
 
     pub fn new() !Caps {
         const ptr = c.gst_caps_new_empty();
@@ -41,67 +41,94 @@ pub const Caps = struct {
     }
 
     pub fn deinit(self: Caps) void {
-        c.gst_caps_unref(self.ptr);
+        if (self.ptr) |p| {
+            c.gst_caps_unref(p);
+        } else {
+            std.log.warn("Caps.deinit() called on already-consumed Caps (this is safe but unnecessary - GStreamer already freed it)", .{});
+        }
     }
 
     pub fn copy(self: Caps) !Caps {
-        const ptr = c.gst_caps_copy(self.ptr);
-        if (ptr == null) {
+        const ptr = self.ptr orelse @panic("Caps.copy() called on consumed Caps - cannot copy caps that were already passed to a function taking ownership");
+        const copied_ptr = c.gst_caps_copy(ptr);
+        if (copied_ptr == null) {
             return error.CapsCopyFailed;
         }
-        return .{ .ptr = ptr };
+        return .{ .ptr = copied_ptr };
     }
 
     pub fn toString(self: Caps) [*:0]const u8 {
-        return c.gst_caps_to_string(self.ptr);
+        const ptr = self.ptr orelse @panic("Caps.toString() called on consumed Caps - cannot convert to string caps that were already passed to a function taking ownership");
+        return c.gst_caps_to_string(ptr);
     }
 
     pub inline fn isFixed(self: Caps) bool {
-        return c.gst_caps_is_fixed(self.ptr) != 0;
+        const ptr = self.ptr orelse @panic("Caps.isFixed() called on consumed Caps - cannot check if caps are fixed after being passed to a function taking ownership");
+        return c.gst_caps_is_fixed(ptr) != 0;
     }
 
     pub inline fn isEqual(self: Caps, other: Caps) bool {
-        return c.gst_caps_is_equal(self.ptr, other.ptr) != 0;
+        const ptr = self.ptr orelse @panic("Caps.isEqual() called on consumed Caps - cannot compare caps that were already passed to a function taking ownership");
+        const other_ptr = other.ptr orelse @panic("Caps.isEqual() called with consumed 'other' Caps - cannot compare caps that were already passed to a function taking ownership");
+        return c.gst_caps_is_equal(ptr, other_ptr) != 0;
     }
 
     pub inline fn isSubset(self: Caps, superset: Caps) bool {
-        return c.gst_caps_is_subset(self.ptr, superset.ptr) != 0;
+        const ptr = self.ptr orelse @panic("Caps.isSubset() called on consumed Caps - cannot check subset after being passed to a function taking ownership");
+        const superset_ptr = superset.ptr orelse @panic("Caps.isSubset() called with consumed 'superset' Caps - cannot check subset after being passed to a function taking ownership");
+        return c.gst_caps_is_subset(ptr, superset_ptr) != 0;
     }
 
     pub inline fn isAny(self: Caps) bool {
-        return c.gst_caps_is_any(self.ptr) != 0;
+        const ptr = self.ptr orelse @panic("Caps.isAny() called on consumed Caps - cannot check if caps are 'any' after being passed to a function taking ownership");
+        return c.gst_caps_is_any(ptr) != 0;
     }
 
     pub inline fn isEmpty(self: Caps) bool {
-        return c.gst_caps_is_empty(self.ptr) != 0;
+        const ptr = self.ptr orelse @panic("Caps.isEmpty() called on consumed Caps - cannot check if caps are empty after being passed to a function taking ownership");
+        return c.gst_caps_is_empty(ptr) != 0;
     }
 
     pub inline fn canIntersect(self: Caps, other: Caps) bool {
-        return c.gst_caps_can_intersect(self.ptr, other.ptr) != 0;
+        const ptr = self.ptr orelse @panic("Caps.canIntersect() called on consumed Caps - cannot check intersection after being passed to a function taking ownership");
+        const other_ptr = other.ptr orelse @panic("Caps.canIntersect() called with consumed 'other' Caps - cannot check intersection after being passed to a function taking ownership");
+        return c.gst_caps_can_intersect(ptr, other_ptr) != 0;
     }
 
     pub fn intersect(self: Caps, other: Caps) !Caps {
-        const ptr = c.gst_caps_intersect(self.ptr, other.ptr);
-        if (ptr == null) {
+        const ptr = self.ptr orelse @panic("Caps.intersect() called on consumed Caps - cannot intersect caps that were already passed to a function taking ownership");
+        const other_ptr = other.ptr orelse @panic("Caps.intersect() called with consumed 'other' Caps - cannot intersect caps that were already passed to a function taking ownership");
+        const result_ptr = c.gst_caps_intersect(ptr, other_ptr);
+        if (result_ptr == null) {
             return error.CapsIntersectFailed;
         }
-        return .{ .ptr = ptr };
+        return .{ .ptr = result_ptr };
     }
 
-    pub fn merge(self: *Caps, other: Caps) void {
-        self.ptr = c.gst_caps_merge(self.ptr, other.ptr);
+    /// Merge another Caps into this one.
+    pub fn merge(self: *Caps, other: *Caps) void {
+        const self_ptr = self.ptr orelse @panic("Caps.merge() called on consumed Caps - cannot merge into caps that were already passed to a function taking ownership");
+        const other_ptr = other.ptr orelse return;
+        other.ptr = null; // Consume other by nulling the pointer
+        self.ptr = c.gst_caps_merge(self_ptr, other_ptr);
     }
 
-    pub fn append(self: *Caps, other: Caps) void {
-        c.gst_caps_append(self.ptr, other.ptr);
+    /// Append another Caps to this one.
+    pub fn append(self: *Caps, other: *Caps) void {
+        const self_ptr = self.ptr orelse @panic("Caps.append() called on consumed Caps - cannot append to caps that were already passed to a function taking ownership");
+        const other_ptr = other.ptr orelse return;
+        other.ptr = null; // Consume other by nulling the pointer
+        c.gst_caps_append(self_ptr, other_ptr);
     }
 
     pub inline fn getSize(self: Caps) u32 {
-        return c.gst_caps_get_size(self.ptr);
+        const ptr = self.ptr orelse @panic("Caps.getSize() called on consumed Caps - cannot get size of caps that were already passed to a function taking ownership");
+        return c.gst_caps_get_size(ptr);
     }
 
     pub inline fn getStructure(self: Caps, index: u32) ?*c.GstStructure {
-        return c.gst_caps_get_structure(self.ptr, @intCast(index));
+        const ptr = self.ptr orelse @panic("Caps.getStructure() called on consumed Caps - cannot get structure from caps that were already passed to a function taking ownership");
+        return c.gst_caps_get_structure(ptr, @intCast(index));
     }
 
     pub fn builder(media_type: [*:0]const u8) CapsBuilder {
@@ -119,7 +146,8 @@ pub const CapsBuilder = struct {
 
     pub fn field(self: CapsBuilder, name: [*:0]const u8, value: anytype) CapsBuilder {
         // Get the first (and only) structure from the caps
-        const structure = c.gst_caps_get_structure(self.caps.ptr, 0);
+        const ptr = self.caps.ptr orelse @panic("CapsBuilder.field() called on consumed CapsBuilder - this should not happen");
+        const structure = c.gst_caps_get_structure(ptr, 0);
 
         const T = @TypeOf(value);
         switch (T) {

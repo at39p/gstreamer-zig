@@ -42,7 +42,7 @@ pub const EventType = enum(c_uint) {
 };
 
 pub const Event = struct {
-    ptr: *c.GstEvent,
+    ptr: ?*c.GstEvent,
 
     pub fn initCustom(event_type: EventType, s: Structure) !Event {
         const ptr = c.gst_event_new_custom(@intFromEnum(event_type), s.ptr);
@@ -77,67 +77,84 @@ pub const Event = struct {
     }
 
     pub fn deinit(self: Event) void {
-        c.gst_event_unref(self.ptr);
+        if (self.ptr) |p| {
+            c.gst_event_unref(p);
+        } else {
+            std.log.warn("Event.deinit() called on already-consumed Event (this is safe but unnecessary - GStreamer already freed it)", .{});
+        }
     }
 
     pub fn ref(self: Event) Event {
-        return .{ .ptr = c.gst_event_ref(self.ptr) };
+        const ptr = self.ptr orelse @panic("Event.ref() called on consumed Event - cannot reference an event that was already passed to a function taking ownership");
+        return .{ .ptr = c.gst_event_ref(ptr) };
     }
 
     pub fn getType(self: Event) EventType {
-        const event_type = c.GST_EVENT_TYPE(self.ptr);
+        const ptr = self.ptr orelse @panic("Event.getType() called on consumed Event - cannot get type of an event that was already passed to a function taking ownership");
+        const event_type = c.GST_EVENT_TYPE(ptr);
         return @enumFromInt(event_type);
     }
 
     pub fn getTypeName(self: Event) [*:0]const u8 {
-        return c.gst_event_type_get_name(c.GST_EVENT_TYPE(self.ptr));
+        const ptr = self.ptr orelse @panic("Event.getTypeName() called on consumed Event - cannot get type name of an event that was already passed to a function taking ownership");
+        return c.gst_event_type_get_name(c.GST_EVENT_TYPE(ptr));
     }
 
     pub fn getStructure(self: Event) ?Structure {
-        const ptr = c.gst_event_get_structure(self.ptr);
-        if (ptr == null) return null;
-        return Structure{ .ptr = @constCast(ptr) };
+        const ptr = self.ptr orelse @panic("Event.getStructure() called on consumed Event - cannot get structure of an event that was already passed to a function taking ownership");
+        const structure_ptr = c.gst_event_get_structure(ptr);
+        if (structure_ptr == null) return null;
+        return Structure{ .ptr = @constCast(structure_ptr) };
     }
 
     pub fn getWritableStructure(self: Event) ?Structure {
-        const ptr = c.gst_event_writable_structure(self.ptr);
-        if (ptr == null) return null;
-        return Structure{ .ptr = ptr };
+        const ptr = self.ptr orelse @panic("Event.getWritableStructure() called on consumed Event - cannot get structure of an event that was already passed to a function taking ownership");
+        const structure_ptr = c.gst_event_writable_structure(ptr);
+        if (structure_ptr == null) return null;
+        return Structure{ .ptr = structure_ptr };
     }
 
     pub fn hasName(self: Event, name: [*:0]const u8) bool {
-        return c.gst_event_has_name(self.ptr, name) != 0;
+        const ptr = self.ptr orelse @panic("Event.hasName() called on consumed Event - cannot check name of an event that was already passed to a function taking ownership");
+        return c.gst_event_has_name(ptr, name) != 0;
     }
 
     pub fn getSeqnum(self: Event) u32 {
-        return c.gst_event_get_seqnum(self.ptr);
+        const ptr = self.ptr orelse @panic("Event.getSeqnum() called on consumed Event - cannot get seqnum of an event that was already passed to a function taking ownership");
+        return c.gst_event_get_seqnum(ptr);
     }
 
     pub fn setSeqnum(self: Event, seqnum: u32) void {
-        c.gst_event_set_seqnum(self.ptr, seqnum);
+        const ptr = self.ptr orelse @panic("Event.setSeqnum() called on consumed Event - cannot set seqnum on an event that was already passed to a function taking ownership");
+        c.gst_event_set_seqnum(ptr, seqnum);
     }
 
     pub fn getRunningTimeOffset(self: Event) i64 {
-        return c.gst_event_get_running_time_offset(self.ptr);
+        const ptr = self.ptr orelse @panic("Event.getRunningTimeOffset() called on consumed Event - cannot get offset of an event that was already passed to a function taking ownership");
+        return c.gst_event_get_running_time_offset(ptr);
     }
 
     pub fn setRunningTimeOffset(self: Event, offset: i64) void {
-        c.gst_event_set_running_time_offset(self.ptr, offset);
+        const ptr = self.ptr orelse @panic("Event.setRunningTimeOffset() called on consumed Event - cannot set offset on an event that was already passed to a function taking ownership");
+        c.gst_event_set_running_time_offset(ptr, offset);
     }
 
     pub fn isWritable(self: Event) bool {
-        return c.gst_event_is_writable(self.ptr) != 0;
+        const ptr = self.ptr orelse @panic("Event.isWritable() called on consumed Event - cannot check writability of an event that was already passed to a function taking ownership");
+        return c.gst_event_is_writable(ptr) != 0;
     }
 
     pub fn makeWritable(self: Event) Event {
-        return .{ .ptr = c.gst_event_make_writable(self.ptr) };
+        const ptr = self.ptr orelse @panic("Event.makeWritable() called on consumed Event - cannot make writable an event that was already passed to a function taking ownership");
+        return .{ .ptr = c.gst_event_make_writable(ptr) };
     }
 
     pub fn copy(self: Event) !Event {
-        const ptr = c.gst_event_copy(self.ptr);
-        if (ptr == null) {
+        const ptr = self.ptr orelse @panic("Event.copy() called on consumed Event - cannot copy an event that was already passed to a function taking ownership");
+        const copied_ptr = c.gst_event_copy(ptr);
+        if (copied_ptr == null) {
             return error.EventCopyFailed;
         }
-        return .{ .ptr = ptr };
+        return .{ .ptr = copied_ptr };
     }
 };

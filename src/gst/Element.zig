@@ -232,8 +232,20 @@ pub const Element = struct {
         return currentPad;
     }
 
-    pub fn sendEvent(self: Element, event: Event) !void {
-        if (c.gst_element_send_event(self.ptr, event.ptr) == 0) {
+    /// Sends an event to the element.
+    ///
+    /// Example:
+    /// ```zig
+    /// var event = try Event.initEos();
+    /// defer event.deinit(); // Safe - will warn if called after sendEvent
+    /// try element.sendEvent(&event);
+    /// // event.ptr is now null, deinit() will warn but not crash
+    /// ```
+    pub fn sendEvent(self: Element, event: *Event) !void {
+        const event_ptr = event.ptr orelse return error.SendEventFailed;
+        event.ptr = null; // Consume the event by nulling the pointer
+        if (c.gst_element_send_event(self.ptr, event_ptr) == 0) {
+            // Note: GStreamer still took ownership even on failure
             return error.SendEventFailed;
         }
     }

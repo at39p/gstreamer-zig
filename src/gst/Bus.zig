@@ -70,9 +70,11 @@ pub const Bus = struct {
         c.gst_bus_set_flushing(self.ptr, if (flushing) 1 else 0);
     }
 
-    // Post a message to the bus
-    pub fn post(self: Bus, msg: message.Message) bool {
-        return c.gst_bus_post(self.ptr, msg.ptr) != 0;
+    /// Post a message to the bus.
+    pub fn post(self: Bus, msg: *message.Message) bool {
+        const msg_ptr = msg.ptr orelse return false;
+        msg.ptr = null; // Consume the message by nulling the pointer
+        return c.gst_bus_post(self.ptr, msg_ptr) != 0;
     }
 
     // Add a watch to the bus with full control over priority and user data

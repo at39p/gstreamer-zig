@@ -5,7 +5,7 @@ const Buffer = @import("Buffer.zig").Buffer;
 pub const c = core.c;
 
 pub const Sample = struct {
-    ptr: *c.GstSample,
+    ptr: ?*c.GstSample,
 
     pub fn fromPtr(ptr: ?*c.GstSample) ?Sample {
         if (ptr) |p| {
@@ -15,11 +15,16 @@ pub const Sample = struct {
     }
 
     pub fn deinit(self: Sample) void {
-        c.gst_sample_unref(self.ptr);
+        if (self.ptr) |p| {
+            c.gst_sample_unref(p);
+        } else {
+            std.log.warn("Sample.deinit() called on already-consumed Sample (this is safe but unnecessary - GStreamer already freed it)", .{});
+        }
     }
 
     pub fn getBufferSize(self: Sample) usize {
-        const buffer = c.gst_sample_get_buffer(self.ptr);
+        const ptr = self.ptr orelse @panic("Sample.getBufferSize() called on consumed Sample - cannot get buffer size of a sample that was already passed to a function taking ownership");
+        const buffer = c.gst_sample_get_buffer(ptr);
         if (buffer) |buf| {
             return c.gst_buffer_get_size(buf);
         }
@@ -27,7 +32,8 @@ pub const Sample = struct {
     }
 
     pub fn getPTS(self: Sample) ?u64 {
-        const buffer = c.gst_sample_get_buffer(self.ptr);
+        const ptr = self.ptr orelse @panic("Sample.getPTS() called on consumed Sample - cannot get PTS of a sample that was already passed to a function taking ownership");
+        const buffer = c.gst_sample_get_buffer(ptr);
         if (buffer) |buf| {
             if (c.GST_BUFFER_PTS_IS_VALID(buf)) {
                 return c.GST_BUFFER_PTS(buf);
@@ -37,7 +43,8 @@ pub const Sample = struct {
     }
 
     pub fn getDTS(self: Sample) ?u64 {
-        const buffer = c.gst_sample_get_buffer(self.ptr);
+        const ptr = self.ptr orelse @panic("Sample.getDTS() called on consumed Sample - cannot get DTS of a sample that was already passed to a function taking ownership");
+        const buffer = c.gst_sample_get_buffer(ptr);
         if (buffer) |buf| {
             if (c.GST_BUFFER_DTS_IS_VALID(buf)) {
                 return c.GST_BUFFER_DTS(buf);
@@ -47,7 +54,8 @@ pub const Sample = struct {
     }
 
     pub fn getCapsString(self: Sample, allocator: std.mem.Allocator) !?[]u8 {
-        const caps = c.gst_sample_get_caps(self.ptr);
+        const ptr = self.ptr orelse @panic("Sample.getCapsString() called on consumed Sample - cannot get caps of a sample that was already passed to a function taking ownership");
+        const caps = c.gst_sample_get_caps(ptr);
         if (caps) |caps_ptr| {
             const caps_string = c.gst_caps_to_string(caps_ptr);
             defer c.g_free(caps_string);
@@ -60,7 +68,8 @@ pub const Sample = struct {
     }
 
     pub inline fn getBuffer(self: Sample) ?Buffer {
-        const buf = c.gst_sample_get_buffer(self.ptr);
+        const ptr = self.ptr orelse @panic("Sample.getBuffer() called on consumed Sample - cannot get buffer of a sample that was already passed to a function taking ownership");
+        const buf = c.gst_sample_get_buffer(ptr);
         if (buf) |b| {
             return Buffer{ .ptr = b };
         }
@@ -68,14 +77,17 @@ pub const Sample = struct {
     }
 
     pub inline fn getCaps(self: Sample) ?*c.GstCaps {
-        return c.gst_sample_get_caps(self.ptr);
+        const ptr = self.ptr orelse @panic("Sample.getCaps() called on consumed Sample - cannot get caps of a sample that was already passed to a function taking ownership");
+        return c.gst_sample_get_caps(ptr);
     }
 
     pub inline fn getSegment(self: Sample) ?*c.GstSegment {
-        return c.gst_sample_get_segment(self.ptr);
+        const ptr = self.ptr orelse @panic("Sample.getSegment() called on consumed Sample - cannot get segment of a sample that was already passed to a function taking ownership");
+        return c.gst_sample_get_segment(ptr);
     }
 
     pub inline fn getInfo(self: Sample) ?*c.GstStructure {
-        return c.gst_sample_get_info(self.ptr);
+        const ptr = self.ptr orelse @panic("Sample.getInfo() called on consumed Sample - cannot get info of a sample that was already passed to a function taking ownership");
+        return c.gst_sample_get_info(ptr);
     }
 };

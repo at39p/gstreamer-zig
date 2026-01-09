@@ -41,13 +41,20 @@ pub const AppSrc = struct {
     }
 
     // Core operations
-    pub fn pushSample(self: AppSrc, sample_to_push: Sample) !void {
-        const ret = gst_app_src_push_sample(@ptrCast(self.el.ptr), sample_to_push.ptr);
+
+    /// Push a sample into the appsrc.
+    pub fn pushSample(self: AppSrc, sample_to_push: *Sample) !void {
+        const sample_ptr = sample_to_push.ptr orelse return error.PushSampleFailed;
+        sample_to_push.ptr = null; // Consume the sample by nulling the pointer
+        const ret = gst_app_src_push_sample(@ptrCast(self.el.ptr), sample_ptr);
         if (ret != c.GST_FLOW_OK) return error.PushSampleFailed;
     }
 
-    pub fn pushBuffer(self: AppSrc, buf: Buffer) !void {
-        const ret = gst_app_src_push_buffer(@ptrCast(self.el.ptr), buf.ptr);
+    /// Push a buffer into the appsrc.
+    pub fn pushBuffer(self: AppSrc, buf: *Buffer) !void {
+        const buf_ptr = buf.ptr orelse return error.PushBufferFailed;
+        buf.ptr = null; // Consume the buffer by nulling the pointer
+        const ret = gst_app_src_push_buffer(@ptrCast(self.el.ptr), buf_ptr);
         if (ret != c.GST_FLOW_OK) return error.PushBufferFailed;
     }
 

@@ -4,7 +4,7 @@ const core = @import("core.zig");
 pub const c = core.c;
 
 pub const Buffer = struct {
-    ptr: *c.GstBuffer,
+    ptr: ?*c.GstBuffer,
 
     pub fn init(size: usize) ?Buffer {
         const ptr = c.gst_buffer_new_allocate(null, size, null);
@@ -15,31 +15,40 @@ pub const Buffer = struct {
     }
 
     pub fn deinit(self: Buffer) void {
-        c.gst_buffer_unref(self.ptr);
+        if (self.ptr) |p| {
+            c.gst_buffer_unref(p);
+        } else {
+            std.log.warn("Buffer.deinit() called on already-consumed Buffer (this is safe but unnecessary - GStreamer already freed it)", .{});
+        }
     }
 
     pub inline fn getSize(self: Buffer) usize {
-        return c.gst_buffer_get_size(self.ptr);
+        const ptr = self.ptr orelse @panic("Buffer.getSize() called on consumed Buffer - cannot get size of a buffer that was already passed to a function taking ownership");
+        return c.gst_buffer_get_size(ptr);
     }
 
     pub inline fn setPts(self: Buffer, pts: u64) void {
-        self.ptr.*.pts = pts;
+        const ptr = self.ptr orelse @panic("Buffer.setPts() called on consumed Buffer - cannot set PTS on a buffer that was already passed to a function taking ownership");
+        ptr.*.pts = pts;
     }
 
     pub inline fn setDts(self: Buffer, dts: u64) void {
-        self.ptr.*.dts = dts;
+        const ptr = self.ptr orelse @panic("Buffer.setDts() called on consumed Buffer - cannot set DTS on a buffer that was already passed to a function taking ownership");
+        ptr.*.dts = dts;
     }
 
     pub inline fn getPts(self: Buffer) ?u64 {
-        if (c.GST_BUFFER_PTS_IS_VALID(self.ptr)) {
-            return c.GST_BUFFER_PTS(self.ptr);
+        const ptr = self.ptr orelse @panic("Buffer.getPts() called on consumed Buffer - cannot get PTS of a buffer that was already passed to a function taking ownership");
+        if (c.GST_BUFFER_PTS_IS_VALID(ptr)) {
+            return c.GST_BUFFER_PTS(ptr);
         }
         return null;
     }
 
     pub inline fn getDts(self: Buffer) ?u64 {
-        if (c.GST_BUFFER_DTS_IS_VALID(self.ptr)) {
-            return c.GST_BUFFER_DTS(self.ptr);
+        const ptr = self.ptr orelse @panic("Buffer.getDts() called on consumed Buffer - cannot get DTS of a buffer that was already passed to a function taking ownership");
+        if (c.GST_BUFFER_DTS_IS_VALID(ptr)) {
+            return c.GST_BUFFER_DTS(ptr);
         }
         return null;
     }
@@ -51,13 +60,15 @@ pub const Buffer = struct {
         info: c.GstMapInfo,
 
         pub fn deinit(self: *MapInfo) void {
-            c.gst_buffer_unmap(self.buffer.ptr, &self.info);
+            const ptr = self.buffer.ptr orelse @panic("MapInfo.deinit() called on MapInfo from consumed Buffer - cannot unmap a buffer that was already passed to a function taking ownership");
+            c.gst_buffer_unmap(ptr, &self.info);
         }
     };
 
     pub fn map(self: Buffer, flags: c.GstMapFlags) ?MapInfo {
+        const ptr = self.ptr orelse @panic("Buffer.map() called on consumed Buffer - cannot map a buffer that was already passed to a function taking ownership");
         var info: c.GstMapInfo = undefined;
-        if (c.gst_buffer_map(self.ptr, &info, flags) != 0) {
+        if (c.gst_buffer_map(ptr, &info, flags) != 0) {
             return MapInfo{
                 .data = @ptrCast(info.data),
                 .size = info.size,

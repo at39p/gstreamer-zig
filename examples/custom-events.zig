@@ -35,19 +35,19 @@ fn probeCallback(_: gst.Pad, info: gst.PadProbeInfo) gst.PadProbeReturn {
 
 fn sendFirstEvent(pipeline: *gst.Pipeline) bool {
     std.debug.print("\n→ Sending event (send_eos=false)\n", .{});
-    const event = CustomEvent.new(false) catch return false;
-    pipeline.sendEvent(event) catch return false;
+    var event = CustomEvent.new(false) catch return false;
+    pipeline.sendEvent(&event) catch return false;
     return false; // Remove timeout source after firing once
 }
 
 fn sendSecondEventAndEOS(pipeline: *gst.Pipeline) bool {
     std.debug.print("\n→ Sending event (send_eos=true)\n", .{});
-    const event = CustomEvent.new(true) catch return false;
-    pipeline.sendEvent(event) catch return false;
+    var event = CustomEvent.new(true) catch return false;
+    pipeline.sendEvent(&event) catch return false;
 
     std.debug.print("→ Sending EOS\n", .{});
-    const eos = gst.Event.initEos() catch return false;
-    pipeline.sendEvent(eos) catch return false;
+    var eos = gst.Event.initEos() catch return false;
+    pipeline.sendEvent(&eos) catch return false;
     return false; // Remove timeout source after firing once
 }
 

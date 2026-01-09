@@ -120,7 +120,8 @@ pub const Pipeline = struct {
         }
     }
 
-    pub fn sendEvent(self: Pipeline, event: Event) !void {
+    /// Sends an event to the pipeline.
+    pub fn sendEvent(self: Pipeline, event: *Event) !void {
         return self.element.sendEvent(event);
     }
 };
