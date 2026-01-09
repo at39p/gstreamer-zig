@@ -96,8 +96,9 @@ pub const Bus = struct {
             };
 
             fn callback(_: [*c]c.GstBus, msg: [*c]c.GstMessage, user_data: ?*anyopaque) callconv(.c) c_int {
+                const msg_ptr = msg orelse @panic("Bus watch callback received null message - GStreamer contract violation");
                 const data: *HandlerData = @ptrCast(@alignCast(user_data));
-                const result = data.handler(data.context, message.Message{ .ptr = msg });
+                const result = data.handler(data.context, message.Message{ .ptr = msg_ptr });
                 return if (result) 1 else 0;
             }
 
@@ -193,9 +194,10 @@ pub const Bus = struct {
                 msg: [*c]c.GstMessage,
                 user_data: ?*anyopaque,
             ) callconv(.c) c_int {
+                const msg_ptr = msg orelse @panic("Bus watch callback received null message - GStreamer contract violation");
                 const ctx: Context = if (Context == void) {} else @ptrCast(@alignCast(user_data));
 
-                const result = callback(ctx, message.Message{ .ptr = msg });
+                const result = callback(ctx, message.Message{ .ptr = msg_ptr });
                 return if (result) 1 else 0;
             }
         };

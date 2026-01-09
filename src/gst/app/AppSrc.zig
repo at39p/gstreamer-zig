@@ -100,7 +100,8 @@ pub const AppSrc = struct {
         const UserDataT = @TypeOf(userdata);
         const wrapper = struct {
             fn needDataCallback(appsrc_ptr: ?*anyopaque, length: c_uint, data: ?*anyopaque) callconv(.c) void {
-                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
+                const ptr = appsrc_ptr orelse @panic("AppSrc need-data callback received null appsrc_ptr - GLib signal contract violation");
+                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
                 const typed_data = convertUserData(UserDataT, data);
                 callback(&appsrc, @as(u32, @intCast(length)), typed_data);
             }
@@ -124,7 +125,8 @@ pub const AppSrc = struct {
         const UserDataT = @TypeOf(userdata);
         const wrapper = struct {
             fn enoughDataCallback(appsrc_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) void {
-                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
+                const ptr = appsrc_ptr orelse @panic("AppSrc enough-data callback received null appsrc_ptr - GLib signal contract violation");
+                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
                 const typed_data = convertUserData(UserDataT, data);
                 callback(&appsrc, typed_data);
             }
@@ -148,7 +150,8 @@ pub const AppSrc = struct {
         const UserDataT = @TypeOf(userdata);
         const wrapper = struct {
             fn seekDataCallback(appsrc_ptr: ?*anyopaque, offset: c_ulong, data: ?*anyopaque) callconv(.c) c_int {
-                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr.?)) } };
+                const ptr = appsrc_ptr orelse @panic("AppSrc seek-data callback received null appsrc_ptr - GLib signal contract violation");
+                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
                 const typed_data = convertUserData(UserDataT, data);
                 const result = callback(&appsrc, @as(u64, @intCast(offset)), typed_data);
                 return if (result) 1 else 0;

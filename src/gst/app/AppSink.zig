@@ -126,7 +126,8 @@ pub const AppSink = struct {
         const UserDataT = @TypeOf(userdata);
         const wrapper = struct {
             fn newSampleCallback(appsink_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) c_int {
-                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsink_ptr.?)) } };
+                const ptr = appsink_ptr orelse @panic("AppSink new-sample callback received null appsink_ptr - GLib signal contract violation");
+                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
                 const typed_data = convertUserData(UserDataT, data);
                 const result = callback(&appsink, typed_data);
                 return @intFromEnum(result);
@@ -151,7 +152,8 @@ pub const AppSink = struct {
         const UserDataT = @TypeOf(userdata);
         const wrapper = struct {
             fn newPrerollCallback(appsink_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) c_int {
-                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsink_ptr.?)) } };
+                const ptr = appsink_ptr orelse @panic("AppSink new-preroll callback received null appsink_ptr - GLib signal contract violation");
+                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
                 const typed_data = convertUserData(UserDataT, data);
                 const result = callback(&appsink, typed_data);
                 return @intFromEnum(result);
@@ -176,7 +178,8 @@ pub const AppSink = struct {
         const UserDataT = @TypeOf(userdata);
         const wrapper = struct {
             fn eosCallback(appsink_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) void {
-                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsink_ptr.?)) } };
+                const ptr = appsink_ptr orelse @panic("AppSink eos callback received null appsink_ptr - GLib signal contract violation");
+                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
                 const typed_data = convertUserData(UserDataT, data);
                 callback(&appsink, typed_data);
             }
