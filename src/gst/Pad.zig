@@ -136,7 +136,7 @@ pub const Pad = struct {
         c.gst_object_unref(@ptrCast(self.ptr));
     }
 
-    pub fn getCaps(self: Pad) !Caps {
+    pub fn getCurrentCaps(self: Pad) !Caps {
         const currentCaps = c.gst_pad_get_current_caps(@ptrCast(self.ptr));
         if (currentCaps == null) {
             return error.GetCurrentCapsFailed;
