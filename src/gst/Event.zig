@@ -44,8 +44,11 @@ pub const EventType = enum(c_uint) {
 pub const Event = struct {
     ptr: ?*c.GstEvent,
 
-    pub fn initCustom(event_type: EventType, s: Structure) !Event {
-        const ptr = c.gst_event_new_custom(@intFromEnum(event_type), s.ptr);
+    pub fn initCustom(event_type: EventType, s: *Structure) !Event {
+        const structure_ptr = s.ptr orelse @panic("Event.initCustom() called with already-consumed Structure - cannot create event from structure that was already transferred");
+        s.ptr = null; // Mark structure as consumed - ownership transferred to event
+
+        const ptr = c.gst_event_new_custom(@intFromEnum(event_type), structure_ptr);
         if (ptr == null) {
             return error.EventCreationFailed;
         }

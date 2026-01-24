@@ -6,9 +6,9 @@ const CustomEvent = struct {
     send_eos: bool,
 
     pub fn new(send_eos: bool) !gst.Event {
-        const structure = try gst.Structure.init("example-custom-event");
+        var structure = try gst.Structure.init("example-custom-event");
         structure.setBoolean("send-eos", send_eos);
-        return gst.Event.initCustom(.custom_downstream, structure);
+        return gst.Event.initCustom(.custom_downstream, &structure);
     }
 
     pub fn parse(event: gst.Event) ?CustomEvent {
