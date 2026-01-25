@@ -44,8 +44,11 @@ pub const EventType = enum(c_uint) {
 pub const Event = struct {
     ptr: ?*c.GstEvent,
 
-    pub fn initCustom(event_type: EventType, s: Structure) !Event {
-        const ptr = c.gst_event_new_custom(@intFromEnum(event_type), s.ptr);
+    pub fn initCustom(event_type: EventType, s: *Structure) !Event {
+        const structure_ptr = s.ptr orelse @panic("Event.initCustom() called with already-consumed Structure - cannot create event from structure that was already transferred");
+        s.ptr = null; // Mark structure as consumed - ownership transferred to event
+
+        const ptr = c.gst_event_new_custom(@intFromEnum(event_type), structure_ptr);
         if (ptr == null) {
             return error.EventCreationFailed;
         }
@@ -100,18 +103,33 @@ pub const Event = struct {
         return c.gst_event_type_get_name(c.GST_EVENT_TYPE(ptr));
     }
 
-    pub fn getStructure(self: Event) ?Structure {
+    /// Returns owned copy. Caller must deinit.
+    pub fn getStructure(self: Event) !?Structure {
         const ptr = self.ptr orelse @panic("Event.getStructure() called on consumed Event - cannot get structure of an event that was already passed to a function taking ownership");
         const structure_ptr = c.gst_event_get_structure(ptr);
         if (structure_ptr == null) return null;
-        return Structure{ .ptr = @constCast(structure_ptr) };
+
+        // Copy the structure so caller owns it
+        const copied_ptr = c.gst_structure_copy(structure_ptr);
+        if (copied_ptr == null) return error.StructureCopyFailed;
+
+        return Structure{ .ptr = copied_ptr, .owned = true };
     }
 
+    /// Returns borrowed reference. Parent owns memory. Safe to deinit (no-op).
+    pub fn getStructureRef(self: Event) ?Structure {
+        const ptr = self.ptr orelse @panic("Event.getStructureRef() called on consumed Event - cannot get structure of an event that was already passed to a function taking ownership");
+        const structure_ptr = c.gst_event_get_structure(ptr);
+        if (structure_ptr == null) return null;
+        return Structure{ .ptr = @constCast(structure_ptr), .owned = false };
+    }
+
+    /// Returns borrowed mutable reference. Parent owns memory. Safe to deinit (no-op).
     pub fn getWritableStructure(self: Event) ?Structure {
         const ptr = self.ptr orelse @panic("Event.getWritableStructure() called on consumed Event - cannot get structure of an event that was already passed to a function taking ownership");
         const structure_ptr = c.gst_event_writable_structure(ptr);
         if (structure_ptr == null) return null;
-        return Structure{ .ptr = structure_ptr };
+        return Structure{ .ptr = structure_ptr, .owned = false };
     }
 
     pub fn hasName(self: Event, name: [*:0]const u8) bool {

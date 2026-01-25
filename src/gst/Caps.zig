@@ -4,6 +4,7 @@ const core = @import("core.zig");
 pub const c = core.c;
 pub const GstCaps = core.GstCaps;
 pub const Fraction = @import("Fraction.zig").Fraction;
+pub const Structure = @import("Structure.zig").Structure;
 
 pub const Caps = struct {
     ptr: ?GstCaps,
@@ -126,9 +127,25 @@ pub const Caps = struct {
         return c.gst_caps_get_size(ptr);
     }
 
-    pub inline fn getStructure(self: Caps, index: u32) ?*c.GstStructure {
+    /// Returns owned copy. Caller must deinit.
+    pub inline fn getStructure(self: Caps, index: u32) !?Structure {
         const ptr = self.ptr orelse @panic("Caps.getStructure() called on consumed Caps - cannot get structure from caps that were already passed to a function taking ownership");
-        return c.gst_caps_get_structure(ptr, @intCast(index));
+        const structure_ptr = c.gst_caps_get_structure(ptr, @intCast(index));
+        if (structure_ptr == null) return null;
+
+        // Copy the structure so caller owns it
+        const copied_ptr = c.gst_structure_copy(structure_ptr);
+        if (copied_ptr == null) return error.StructureCopyFailed;
+
+        return Structure{ .ptr = copied_ptr, .owned = true };
+    }
+
+    /// Returns borrowed reference. Parent owns memory. Safe to deinit (no-op).
+    pub inline fn getStructureRef(self: Caps, index: u32) ?Structure {
+        const ptr = self.ptr orelse @panic("Caps.getStructureRef() called on consumed Caps - cannot get structure from caps that were already passed to a function taking ownership");
+        const structure_ptr = c.gst_caps_get_structure(ptr, @intCast(index));
+        if (structure_ptr == null) return null;
+        return Structure{ .ptr = structure_ptr, .owned = false };
     }
 
     pub fn builder(media_type: [*:0]const u8) CapsBuilder {
