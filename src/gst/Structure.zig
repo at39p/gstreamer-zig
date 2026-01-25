@@ -7,6 +7,7 @@ const Fraction = @import("Fraction.zig").Fraction;
 
 pub const Structure = struct {
     ptr: ?GstStructure,
+    owned: bool,
 
     // Constructor functions
     pub fn init(name: [*:0]const u8) !Structure {
@@ -14,7 +15,7 @@ pub const Structure = struct {
         if (ptr == null) {
             return error.StructureCreationFailed;
         }
-        return .{ .ptr = ptr };
+        return .{ .ptr = ptr, .owned = true };
     }
 
     pub fn initFromString(str: [*:0]const u8) !Structure {
@@ -22,7 +23,7 @@ pub const Structure = struct {
         if (ptr == null) {
             return error.InvalidStructureString;
         }
-        return .{ .ptr = ptr };
+        return .{ .ptr = ptr, .owned = true };
     }
 
     pub fn copy(self: Structure) !Structure {
@@ -31,12 +32,15 @@ pub const Structure = struct {
         if (ptr == null) {
             return error.StructureCopyFailed;
         }
-        return .{ .ptr = ptr };
+        return .{ .ptr = ptr, .owned = true };
     }
 
+    /// Frees structure if owned. No-op if borrowed. Safe to use with defer.
     pub fn deinit(self: Structure) void {
         if (self.ptr) |p| {
-            c.gst_structure_free(p);
+            if (self.owned) {
+                c.gst_structure_free(p);
+            }
         } else {
             std.log.warn("Structure.deinit() called on already-consumed Structure (this is safe but unnecessary - GStreamer already freed it)", .{});
         }
@@ -255,7 +259,7 @@ pub const Structure = struct {
         const other_ptr = other.ptr orelse @panic("Structure.intersect() called with consumed other Structure - cannot intersect consumed structures");
         const ptr = c.gst_structure_intersect(self_ptr, other_ptr);
         if (ptr != null) {
-            return Structure{ .ptr = ptr };
+            return Structure{ .ptr = ptr, .owned = true };
         }
         return null;
     }

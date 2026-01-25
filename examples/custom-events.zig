@@ -14,7 +14,7 @@ const CustomEvent = struct {
     pub fn parse(event: gst.Event) ?CustomEvent {
         if (!event.hasName("example-custom-event")) return null;
 
-        const structure = event.getStructure() orelse return null;
+        const structure = event.getStructureRef() orelse return null;
         const send_eos = structure.getBoolean("send-eos") orelse return null;
 
         return .{ .send_eos = send_eos };
