@@ -249,6 +249,17 @@ pub const Element = struct {
             return error.SendEventFailed;
         }
     }
+
+    /// Synchronizes the element's state with its parent container.
+    /// This is typically called after adding an element to a bin/pipeline
+    /// that is already in a non-NULL state.
+    ///
+    /// Returns an error if the sync failed or a state change is already pending.
+    pub fn syncStateWithParent(self: Element) !void {
+        if (c.gst_element_sync_state_with_parent(self.ptr) == 0) {
+            return error.StateSyncFailed;
+        }
+    }
 };
 
 pub const UriType = enum(c_uint) {

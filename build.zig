@@ -66,6 +66,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "srt", .file = "srt-transmuxer.zig", .description = "Run srt transmuxer example", .skip_install = true },
         .{ .name = "bins", .file = "bins.zig", .description = "Run the bins example", .skip_install = true },
         .{ .name = "custom-events", .file = "custom-events.zig", .description = "Run the custom events example", .skip_install = true },
+        .{ .name = "decodebin", .file = "decodebin.zig", .description = "Run the decodebin example" },
     };
 
     for (examples) |example| {

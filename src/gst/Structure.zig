@@ -47,9 +47,11 @@ pub const Structure = struct {
     }
 
     // Name and metadata functions
-    pub fn getName(self: Structure) [*:0]const u8 {
+    pub fn getName(self: Structure) ?[]const u8 {
         const ptr = self.ptr orelse @panic("Structure.getName() called on consumed Structure - cannot use structure after ownership was transferred");
-        return c.gst_structure_get_name(ptr);
+        const name = c.gst_structure_get_name(ptr);
+        if (name == null) return null;
+        return std.mem.span(name);
     }
 
     pub fn hasName(self: Structure, name: [*:0]const u8) bool {
