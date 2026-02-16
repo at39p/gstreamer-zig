@@ -89,3 +89,8 @@ pub const VideoFormat = @import("gst/video/VideoFormat.zig").VideoFormat;
 pub const VideoFormatInfo = @import("gst/video/VideoFormatInfo.zig").VideoFormatInfo;
 pub const VideoFrame = videoframe.VideoFrame;
 pub const VideoFrameFlags = videoframe.VideoFrameFlags;
+
+const video_time_code = @import("gst/video/VideoTimeCode.zig");
+pub const VideoTimeCode = video_time_code.VideoTimeCode;
+pub const VideoTimeCodeFlags = video_time_code.VideoTimeCodeFlags;
+pub const VideoTimeCodeInterval = video_time_code.VideoTimeCodeInterval;
