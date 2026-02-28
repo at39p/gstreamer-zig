@@ -60,7 +60,7 @@ pub const AppSink = struct {
         return error.Stopped;
     }
 
-    /// Returns null on timeout, error on EOS/stopped, Sample on success.
+    /// Returns a Sample on success, error.Eos on end-of-stream, or null on timeout/stopped.
     pub fn tryPullSample(self: AppSink, timeout: u64) PullError!?Sample {
         const ptr = c.gst_app_sink_try_pull_sample(@ptrCast(self.el.ptr), timeout);
         if (Sample.fromPtr(ptr)) |s| {
