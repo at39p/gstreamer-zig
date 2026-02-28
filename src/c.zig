@@ -5,6 +5,8 @@ pub const c = @cImport({
     @cDefine("GHookList", "void*");
 
     @cInclude("gst/gst.h");
+    @cInclude("gst/app/gstappsrc.h");
+    @cInclude("gst/app/gstappsink.h");
 
     @cInclude("glib.h");
     @cInclude("glib-object.h");

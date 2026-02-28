@@ -1,4 +1,3 @@
-const std = @import("std");
 const core = @import("../core.zig");
 const element = @import("../Element.zig");
 const sample = @import("../Sample.zig");
@@ -9,10 +8,6 @@ pub const c = core.c;
 pub const Sample = sample.Sample;
 pub const Buffer = buffer.Buffer;
 pub const Caps = caps.Caps;
-
-extern fn gst_app_src_push_buffer(appsrc: ?*anyopaque, buffer: ?*anyopaque) c.GstFlowReturn;
-extern fn gst_app_src_push_sample(appsrc: ?*anyopaque, sample: ?*anyopaque) c.GstFlowReturn;
-extern fn gst_app_src_end_of_stream(appsrc: ?*anyopaque) c.GstFlowReturn;
 
 pub const AppSrc = struct {
     el: element.Element,
@@ -46,21 +41,27 @@ pub const AppSrc = struct {
     pub fn pushSample(self: AppSrc, sample_to_push: *Sample) !void {
         const sample_ptr = sample_to_push.ptr orelse return error.PushSampleFailed;
         sample_to_push.ptr = null; // Consume the sample by nulling the pointer
-        const ret = gst_app_src_push_sample(@ptrCast(self.el.ptr), sample_ptr);
-        if (ret != c.GST_FLOW_OK) return error.PushSampleFailed;
+        const ret = c.gst_app_src_push_sample(@ptrCast(self.el.ptr), @ptrCast(sample_ptr));
+        if (ret != c.GST_FLOW_OK) {
+            return error.PushSampleFailed;
+        }
     }
 
     /// Push a buffer into the appsrc.
     pub fn pushBuffer(self: AppSrc, buf: *Buffer) !void {
         const buf_ptr = buf.ptr orelse return error.PushBufferFailed;
         buf.ptr = null; // Consume the buffer by nulling the pointer
-        const ret = gst_app_src_push_buffer(@ptrCast(self.el.ptr), buf_ptr);
-        if (ret != c.GST_FLOW_OK) return error.PushBufferFailed;
+        const ret = c.gst_app_src_push_buffer(@ptrCast(self.el.ptr), @ptrCast(buf_ptr));
+        if (ret != c.GST_FLOW_OK) {
+            return error.PushBufferFailed;
+        }
     }
 
     pub fn endOfStream(self: AppSrc) !void {
-        const ret = gst_app_src_end_of_stream(@ptrCast(self.el.ptr));
-        if (ret != c.GST_FLOW_OK) return error.EndOfStreamFailed;
+        const ret = c.gst_app_src_end_of_stream(@ptrCast(self.el.ptr));
+        if (ret != c.GST_FLOW_OK) {
+            return error.EndOfStreamFailed;
+        }
     }
 
     // Property setters
@@ -94,80 +95,78 @@ pub const AppSrc = struct {
         c.g_object_set(self.el.ptr, "emit-signals", value, @as(?*anyopaque, null));
     }
 
-    /// Connect a callback for the "need-data" signal.
-    /// Callback signature: fn(appsrc: *AppSrc, length: u32, userdata: T) void
-    pub fn connectNeedData(self: AppSrc, comptime callback: anytype, userdata: anytype) !u64 {
-        const UserDataT = @TypeOf(userdata);
-        const wrapper = struct {
-            fn needDataCallback(appsrc_ptr: ?*anyopaque, length: c_uint, data: ?*anyopaque) callconv(.c) void {
-                const ptr = appsrc_ptr orelse @panic("AppSrc need-data callback received null appsrc_ptr - GLib signal contract violation");
-                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
-                const typed_data = convertUserData(UserDataT, data);
-                callback(&appsrc, @as(u32, @intCast(length)), typed_data);
-            }
-        }.needDataCallback;
+    /// Set callbacks using the GStreamer 1.28+ simple callbacks API.
+    ///
+    /// Pass an anonymous struct with optional `{function, userdata}` tuple fields:
+    ///   - `.need_data`    — fn(*AppSrc, u32, T) void
+    ///   - `.enough_data`  — fn(*AppSrc, T) void
+    ///   - `.seek_data`    — fn(*AppSrc, u64, T) bool
+    ///
+    /// Each field is optional; omit any callbacks you don't need.
+    ///
+    /// Example:
+    /// ```zig
+    /// appsrc.setCallbacks(.{
+    ///     .need_data   = .{ onNeedData, &ctx },
+    ///     .enough_data = .{ onEnoughData, &ctx },
+    /// });
+    /// ```
+    pub fn setCallbacks(self: AppSrc, callbacks: anytype) void {
+        const CallbacksT = @TypeOf(callbacks);
+        const cb = c.gst_app_src_simple_callbacks_new();
 
-        const handler_id = c.g_signal_connect_data(
-            self.el.ptr,
-            "need-data",
-            @ptrCast(&wrapper),
-            prepareUserData(userdata),
-            null,
-            0,
-        );
-        if (handler_id == 0) return error.SignalConnectionFailed;
-        return @intCast(handler_id);
-    }
+        if (@hasField(CallbacksT, "need_data")) {
+            const entry = callbacks.need_data;
+            const fn_ptr = comptime entry[0];
+            const has_userdata = comptime @TypeOf(entry[1]) != @TypeOf(null);
+            const wrapper = struct {
+                fn thunk(appsrc_ptr: ?*c.GstAppSrc, length: c.guint, data: c.gpointer) callconv(.c) void {
+                    var src = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr)) } };
+                    if (has_userdata) {
+                        fn_ptr(&src, @as(u32, @intCast(length)), convertUserData(@TypeOf(entry[1]), data));
+                    } else {
+                        fn_ptr(&src, @as(u32, @intCast(length)));
+                    }
+                }
+            };
+            c.gst_app_src_simple_callbacks_set_need_data(cb, wrapper.thunk, prepareUserData(entry[1]), null);
+        }
 
-    /// Connect a callback for the "enough-data" signal.
-    /// Callback signature: fn(appsrc: *AppSrc, userdata: T) void
-    pub fn connectEnoughData(self: AppSrc, comptime callback: anytype, userdata: anytype) !u64 {
-        const UserDataT = @TypeOf(userdata);
-        const wrapper = struct {
-            fn enoughDataCallback(appsrc_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) void {
-                const ptr = appsrc_ptr orelse @panic("AppSrc enough-data callback received null appsrc_ptr - GLib signal contract violation");
-                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
-                const typed_data = convertUserData(UserDataT, data);
-                callback(&appsrc, typed_data);
-            }
-        }.enoughDataCallback;
+        if (@hasField(CallbacksT, "enough_data")) {
+            const entry = callbacks.enough_data;
+            const fn_ptr = comptime entry[0];
+            const has_userdata = comptime @TypeOf(entry[1]) != @TypeOf(null);
+            const wrapper = struct {
+                fn thunk(appsrc_ptr: ?*c.GstAppSrc, data: c.gpointer) callconv(.c) void {
+                    var src = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr)) } };
+                    if (has_userdata) {
+                        fn_ptr(&src, convertUserData(@TypeOf(entry[1]), data));
+                    } else {
+                        fn_ptr(&src);
+                    }
+                }
+            };
+            c.gst_app_src_simple_callbacks_set_enough_data(cb, wrapper.thunk, prepareUserData(entry[1]), null);
+        }
 
-        const handler_id = c.g_signal_connect_data(
-            self.el.ptr,
-            "enough-data",
-            @ptrCast(&wrapper),
-            prepareUserData(userdata),
-            null,
-            0,
-        );
-        if (handler_id == 0) return error.SignalConnectionFailed;
-        return @intCast(handler_id);
-    }
+        if (@hasField(CallbacksT, "seek_data")) {
+            const entry = callbacks.seek_data;
+            const fn_ptr = comptime entry[0];
+            const has_userdata = comptime @TypeOf(entry[1]) != @TypeOf(null);
+            const wrapper = struct {
+                fn thunk(appsrc_ptr: ?*c.GstAppSrc, offset: c.guint64, data: c.gpointer) callconv(.c) c.gboolean {
+                    var src = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsrc_ptr)) } };
+                    if (has_userdata) {
+                        return if (fn_ptr(&src, @as(u64, offset), convertUserData(@TypeOf(entry[1]), data))) 1 else 0;
+                    } else {
+                        return if (fn_ptr(&src, @as(u64, offset))) 1 else 0;
+                    }
+                }
+            };
+            c.gst_app_src_simple_callbacks_set_seek_data(cb, wrapper.thunk, prepareUserData(entry[1]), null);
+        }
 
-    /// Connect a callback for the "seek-data" signal.
-    /// Callback signature: fn(appsrc: *AppSrc, offset: u64, userdata: T) bool
-    pub fn connectSeekData(self: AppSrc, comptime callback: anytype, userdata: anytype) !u64 {
-        const UserDataT = @TypeOf(userdata);
-        const wrapper = struct {
-            fn seekDataCallback(appsrc_ptr: ?*anyopaque, offset: c_ulong, data: ?*anyopaque) callconv(.c) c_int {
-                const ptr = appsrc_ptr orelse @panic("AppSrc seek-data callback received null appsrc_ptr - GLib signal contract violation");
-                var appsrc = AppSrc{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
-                const typed_data = convertUserData(UserDataT, data);
-                const result = callback(&appsrc, @as(u64, @intCast(offset)), typed_data);
-                return if (result) 1 else 0;
-            }
-        }.seekDataCallback;
-
-        const handler_id = c.g_signal_connect_data(
-            self.el.ptr,
-            "seek-data",
-            @ptrCast(&wrapper),
-            prepareUserData(userdata),
-            null,
-            0,
-        );
-        if (handler_id == 0) return error.SignalConnectionFailed;
-        return @intCast(handler_id);
+        c.gst_app_src_set_simple_callbacks(@ptrCast(self.el.ptr), cb);
     }
 
     pub const Format = enum(c_int) {
@@ -189,12 +188,13 @@ pub const AppSrc = struct {
 fn prepareUserData(userdata: anytype) ?*anyopaque {
     const T = @TypeOf(userdata);
     return switch (@typeInfo(T)) {
+        .null => null,
         .pointer => @ptrCast(@constCast(userdata)),
         else => @ptrCast(@constCast(&userdata)),
     };
 }
 
-fn convertUserData(comptime T: type, data: ?*anyopaque) T {
+fn convertUserData(comptime T: type, data: c.gpointer) T {
     return switch (@typeInfo(T)) {
         .pointer => @ptrCast(@alignCast(data.?)),
         else => @as(*T, @ptrCast(@alignCast(data.?))).*,

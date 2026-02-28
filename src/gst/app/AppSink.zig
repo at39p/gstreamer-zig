@@ -1,4 +1,3 @@
-const std = @import("std");
 const core = @import("../core.zig");
 const element = @import("../Element.zig");
 const sample = @import("../Sample.zig");
@@ -40,55 +39,41 @@ pub const AppSink = struct {
 
     // Core operations
     pub fn pullSample(self: AppSink) PullError!Sample {
-        var gstSample: ?core.GstSample = null;
-        c.g_signal_emit_by_name(self.el.ptr, "pull-sample", &gstSample);
-
-        if (Sample.fromPtr(gstSample)) |s| {
+        const ptr = c.gst_app_sink_pull_sample(@ptrCast(self.el.ptr));
+        if (Sample.fromPtr(ptr)) |s| {
             return s;
         }
-
         if (self.isEos()) {
             return error.Eos;
         }
-
         return error.Stopped;
     }
 
     pub fn pullPreroll(self: AppSink) PullError!Sample {
-        var gstSample: ?core.GstSample = null;
-        c.g_signal_emit_by_name(self.el.ptr, "pull-preroll", &gstSample);
-
-        if (Sample.fromPtr(gstSample)) |s| {
+        const ptr = c.gst_app_sink_pull_preroll(@ptrCast(self.el.ptr));
+        if (Sample.fromPtr(ptr)) |s| {
             return s;
         }
-
         if (self.isEos()) {
             return error.Eos;
         }
-
         return error.Stopped;
     }
 
-    /// Returns null on timeout, error on EOS/stopped, Sample on success
+    /// Returns null on timeout, error on EOS/stopped, Sample on success.
     pub fn tryPullSample(self: AppSink, timeout: u64) PullError!?Sample {
-        var gstSample: ?core.GstSample = null;
-        c.g_signal_emit_by_name(self.el.ptr, "try-pull-sample", timeout, &gstSample);
-
-        if (Sample.fromPtr(gstSample)) |s| {
+        const ptr = c.gst_app_sink_try_pull_sample(@ptrCast(self.el.ptr), timeout);
+        if (Sample.fromPtr(ptr)) |s| {
             return s;
         }
-
         if (self.isEos()) {
             return error.Eos;
         }
-
         return null; // timeout
     }
 
     pub fn isEos(self: AppSink) bool {
-        var is_eos: c_int = 0;
-        c.g_object_get(self.el.ptr, "eos", &is_eos, @as(?*anyopaque, null));
-        return is_eos != 0;
+        return c.gst_app_sink_is_eos(@ptrCast(self.el.ptr)) != 0;
     }
 
     // Property setters
@@ -120,81 +105,114 @@ pub const AppSink = struct {
         c.g_object_set(self.el.ptr, "wait-on-eos", value, @as(?*anyopaque, null));
     }
 
-    /// Connect a callback for the "new-sample" signal.
-    /// Callback signature: fn(appsink: *AppSink, userdata: T) FlowReturn
-    pub fn connectNewSample(self: AppSink, comptime callback: anytype, userdata: anytype) !u64 {
-        const UserDataT = @TypeOf(userdata);
-        const wrapper = struct {
-            fn newSampleCallback(appsink_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) c_int {
-                const ptr = appsink_ptr orelse @panic("AppSink new-sample callback received null appsink_ptr - GLib signal contract violation");
-                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
-                const typed_data = convertUserData(UserDataT, data);
-                const result = callback(&appsink, typed_data);
-                return @intFromEnum(result);
-            }
-        }.newSampleCallback;
+    /// Set callbacks using the GStreamer 1.28+ simple callbacks API.
+    ///
+    /// Pass an anonymous struct with optional `{function, userdata}` tuple fields:
+    ///   - `.eos`                  — fn(*AppSink, T) void
+    ///   - `.new_preroll`          — fn(*AppSink, T) FlowReturn
+    ///   - `.new_sample`           — fn(*AppSink, T) FlowReturn
+    ///   - `.new_event`            — fn(*AppSink, T) bool
+    ///   - `.propose_allocation`   — fn(*AppSink, *anyopaque, T) bool
+    ///
+    /// Each field is optional; omit any callbacks you don't need.
+    ///
+    /// Example:
+    /// ```zig
+    /// appsink.setCallbacks(.{
+    ///     .new_sample = .{ onNewSample, &ctx },
+    ///     .eos        = .{ onEos, &ctx },
+    /// });
+    /// ```
+    pub fn setCallbacks(self: AppSink, callbacks: anytype) void {
+        const CallbacksT = @TypeOf(callbacks);
+        const cb = c.gst_app_sink_simple_callbacks_new();
 
-        const handler_id = c.g_signal_connect_data(
-            self.el.ptr,
-            "new-sample",
-            @ptrCast(&wrapper),
-            prepareUserData(userdata),
-            null,
-            0,
-        );
-        if (handler_id == 0) return error.SignalConnectionFailed;
-        return @intCast(handler_id);
-    }
+        if (@hasField(CallbacksT, "eos")) {
+            const entry = callbacks.eos;
+            const fn_ptr = comptime entry[0];
+            const has_userdata = comptime @TypeOf(entry[1]) != @TypeOf(null);
+            const wrapper = struct {
+                fn thunk(appsink_ptr: ?*c.GstAppSink, data: c.gpointer) callconv(.c) void {
+                    var sink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsink_ptr)) } };
+                    if (has_userdata) {
+                        fn_ptr(&sink, convertUserData(@TypeOf(entry[1]), data));
+                    } else {
+                        fn_ptr(&sink);
+                    }
+                }
+            };
+            c.gst_app_sink_simple_callbacks_set_eos(cb, wrapper.thunk, prepareUserData(entry[1]), null);
+        }
 
-    /// Connect a callback for the "new-preroll" signal.
-    /// Callback signature: fn(appsink: *AppSink, userdata: T) FlowReturn
-    pub fn connectNewPreroll(self: AppSink, comptime callback: anytype, userdata: anytype) !u64 {
-        const UserDataT = @TypeOf(userdata);
-        const wrapper = struct {
-            fn newPrerollCallback(appsink_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) c_int {
-                const ptr = appsink_ptr orelse @panic("AppSink new-preroll callback received null appsink_ptr - GLib signal contract violation");
-                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
-                const typed_data = convertUserData(UserDataT, data);
-                const result = callback(&appsink, typed_data);
-                return @intFromEnum(result);
-            }
-        }.newPrerollCallback;
+        if (@hasField(CallbacksT, "new_preroll")) {
+            const entry = callbacks.new_preroll;
+            const fn_ptr = comptime entry[0];
+            const has_userdata = comptime @TypeOf(entry[1]) != @TypeOf(null);
+            const wrapper = struct {
+                fn thunk(appsink_ptr: ?*c.GstAppSink, data: c.gpointer) callconv(.c) c.GstFlowReturn {
+                    var sink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsink_ptr)) } };
+                    if (has_userdata) {
+                        return @intFromEnum(fn_ptr(&sink, convertUserData(@TypeOf(entry[1]), data)));
+                    } else {
+                        return @intFromEnum(fn_ptr(&sink));
+                    }
+                }
+            };
+            c.gst_app_sink_simple_callbacks_set_new_preroll(cb, wrapper.thunk, prepareUserData(entry[1]), null);
+        }
 
-        const handler_id = c.g_signal_connect_data(
-            self.el.ptr,
-            "new-preroll",
-            @ptrCast(&wrapper),
-            prepareUserData(userdata),
-            null,
-            0,
-        );
-        if (handler_id == 0) return error.SignalConnectionFailed;
-        return @intCast(handler_id);
-    }
+        if (@hasField(CallbacksT, "new_sample")) {
+            const entry = callbacks.new_sample;
+            const fn_ptr = comptime entry[0];
+            const has_userdata = comptime @TypeOf(entry[1]) != @TypeOf(null);
+            const wrapper = struct {
+                fn thunk(appsink_ptr: ?*c.GstAppSink, data: c.gpointer) callconv(.c) c.GstFlowReturn {
+                    var sink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsink_ptr)) } };
+                    if (has_userdata) {
+                        return @intFromEnum(fn_ptr(&sink, convertUserData(@TypeOf(entry[1]), data)));
+                    } else {
+                        return @intFromEnum(fn_ptr(&sink));
+                    }
+                }
+            };
+            c.gst_app_sink_simple_callbacks_set_new_sample(cb, wrapper.thunk, prepareUserData(entry[1]), null);
+        }
 
-    /// Connect a callback for the "eos" signal.
-    /// Callback signature: fn(appsink: *AppSink, userdata: T) void
-    pub fn connectEos(self: AppSink, comptime callback: anytype, userdata: anytype) !u64 {
-        const UserDataT = @TypeOf(userdata);
-        const wrapper = struct {
-            fn eosCallback(appsink_ptr: ?*anyopaque, data: ?*anyopaque) callconv(.c) void {
-                const ptr = appsink_ptr orelse @panic("AppSink eos callback received null appsink_ptr - GLib signal contract violation");
-                var appsink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(ptr)) } };
-                const typed_data = convertUserData(UserDataT, data);
-                callback(&appsink, typed_data);
-            }
-        }.eosCallback;
+        if (@hasField(CallbacksT, "new_event")) {
+            const entry = callbacks.new_event;
+            const fn_ptr = comptime entry[0];
+            const has_userdata = comptime @TypeOf(entry[1]) != @TypeOf(null);
+            const wrapper = struct {
+                fn thunk(appsink_ptr: ?*c.GstAppSink, data: c.gpointer) callconv(.c) c.gboolean {
+                    var sink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsink_ptr)) } };
+                    if (has_userdata) {
+                        return if (fn_ptr(&sink, convertUserData(@TypeOf(entry[1]), data))) 1 else 0;
+                    } else {
+                        return if (fn_ptr(&sink)) 1 else 0;
+                    }
+                }
+            };
+            c.gst_app_sink_simple_callbacks_set_new_event(cb, wrapper.thunk, prepareUserData(entry[1]), null);
+        }
 
-        const handler_id = c.g_signal_connect_data(
-            self.el.ptr,
-            "eos",
-            @ptrCast(&wrapper),
-            prepareUserData(userdata),
-            null,
-            0,
-        );
-        if (handler_id == 0) return error.SignalConnectionFailed;
-        return @intCast(handler_id);
+        if (@hasField(CallbacksT, "propose_allocation")) {
+            const entry = callbacks.propose_allocation;
+            const fn_ptr = comptime entry[0];
+            const has_userdata = comptime @TypeOf(entry[1]) != @TypeOf(null);
+            const wrapper = struct {
+                fn thunk(appsink_ptr: ?*c.GstAppSink, query: ?*c.GstQuery, data: c.gpointer) callconv(.c) c.gboolean {
+                    var sink = AppSink{ .el = element.Element{ .ptr = @ptrCast(@alignCast(appsink_ptr)) } };
+                    if (has_userdata) {
+                        return if (fn_ptr(&sink, query, convertUserData(@TypeOf(entry[1]), data))) 1 else 0;
+                    } else {
+                        return if (fn_ptr(&sink, query)) 1 else 0;
+                    }
+                }
+            };
+            c.gst_app_sink_simple_callbacks_set_propose_allocation(cb, wrapper.thunk, prepareUserData(entry[1]), null);
+        }
+
+        c.gst_app_sink_set_simple_callbacks(@ptrCast(self.el.ptr), cb);
     }
 
     pub const FlowReturn = enum(c_int) {
@@ -211,12 +229,13 @@ pub const AppSink = struct {
 fn prepareUserData(userdata: anytype) ?*anyopaque {
     const T = @TypeOf(userdata);
     return switch (@typeInfo(T)) {
+        .null => null,
         .pointer => @ptrCast(@constCast(userdata)),
         else => @ptrCast(@constCast(&userdata)),
     };
 }
 
-fn convertUserData(comptime T: type, data: ?*anyopaque) T {
+fn convertUserData(comptime T: type, data: c.gpointer) T {
     return switch (@typeInfo(T)) {
         .pointer => @ptrCast(@alignCast(data.?)),
         else => @as(*T, @ptrCast(@alignCast(data.?))).*,
