@@ -231,13 +231,13 @@ fn prepareUserData(userdata: anytype) ?*anyopaque {
     return switch (@typeInfo(T)) {
         .null => null,
         .pointer => @ptrCast(@constCast(userdata)),
-        else => @ptrCast(@constCast(&userdata)),
+        else => @compileError("userdata must be a pointer or null"),
     };
 }
 
 fn convertUserData(comptime T: type, data: c.gpointer) T {
     return switch (@typeInfo(T)) {
         .pointer => @ptrCast(@alignCast(data.?)),
-        else => @as(*T, @ptrCast(@alignCast(data.?))).*,
+        else => @compileError("userdata type must be a pointer or null"),
     };
 }
