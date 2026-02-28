@@ -114,7 +114,9 @@ fn run() !void {
     };
 
     // Set up appsrc callbacks
-    _ = try appsrc.connectNeedData(onNeedData, &context);
+    appsrc.setCallbacks(.{
+        .need_data = .{ onNeedData, &context },
+    });
 
     const videoconvert = try gst.Element.init("videoconvert", "convert");
     const autovideosink = try gst.Element.init("autovideosink", "sink");

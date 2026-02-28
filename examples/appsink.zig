@@ -3,7 +3,7 @@ const gst = @import("gst");
 
 var sample_count: u32 = 0;
 
-fn onNewSample(appsink: *gst.AppSink, _: *anyopaque) gst.AppSink.FlowReturn {
+fn onNewSample(appsink: *gst.AppSink) gst.AppSink.FlowReturn {
     const sample = appsink.pullSample() catch |err| return switch (err) {
         error.Eos => .eos,
         error.Stopped => .flushing,
@@ -53,11 +53,11 @@ fn run() !void {
     const caps = try gst.Caps.fromString("audio/x-raw,format=S16LE,channels=1,rate=44100");
     defer caps.deinit();
     appsink.setCaps(caps);
-    appsink.setEmitSignals(true);
 
-    // Connect the new-sample callback
-    var dummy: u8 = 0;
-    _ = try appsink.connectNewSample(onNewSample, &dummy);
+    // Set up appsink callbacks
+    appsink.setCallbacks(.{
+        .new_sample = .{ onNewSample, null },
+    });
 
     try pipeline.addMany(&.{ src, appsink.asElement() });
     try src.link(appsink.asElement());
