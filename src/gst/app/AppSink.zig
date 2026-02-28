@@ -112,7 +112,7 @@ pub const AppSink = struct {
     ///   - `.new_preroll`          — fn(*AppSink, T) FlowReturn
     ///   - `.new_sample`           — fn(*AppSink, T) FlowReturn
     ///   - `.new_event`            — fn(*AppSink, T) bool
-    ///   - `.propose_allocation`   — fn(*AppSink, *anyopaque, T) bool
+    ///   - `.propose_allocation`   — fn(*AppSink, ?*c.GstQuery, T) bool
     ///
     /// Each field is optional; omit any callbacks you don't need.
     ///

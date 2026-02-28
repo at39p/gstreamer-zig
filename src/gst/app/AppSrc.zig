@@ -37,20 +37,21 @@ pub const AppSrc = struct {
 
     // Core operations
 
-    /// Push a sample into the appsrc.
-    pub fn pushSample(self: AppSrc, sample_to_push: *Sample) !void {
+    /// Push a sample into the appsrc. The sample is borrowed; the caller
+    /// retains ownership and is responsible for unreffing it.
+    pub fn pushSample(self: AppSrc, sample_to_push: *const Sample) !void {
         const sample_ptr = sample_to_push.ptr orelse return error.PushSampleFailed;
-        sample_to_push.ptr = null; // Consume the sample by nulling the pointer
         const ret = c.gst_app_src_push_sample(@ptrCast(self.el.ptr), @ptrCast(sample_ptr));
         if (ret != c.GST_FLOW_OK) {
             return error.PushSampleFailed;
         }
     }
 
-    /// Push a buffer into the appsrc.
+    /// Push a buffer into the appsrc. Ownership of the buffer is transferred
+    /// to GStreamer; the caller must not use it afterwards.
     pub fn pushBuffer(self: AppSrc, buf: *Buffer) !void {
         const buf_ptr = buf.ptr orelse return error.PushBufferFailed;
-        buf.ptr = null; // Consume the buffer by nulling the pointer
+        buf.ptr = null; // Ownership transferred to GStreamer
         const ret = c.gst_app_src_push_buffer(@ptrCast(self.el.ptr), @ptrCast(buf_ptr));
         if (ret != c.GST_FLOW_OK) {
             return error.PushBufferFailed;
