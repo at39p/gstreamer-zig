@@ -33,6 +33,7 @@ pub const VideoTimeCode = struct {
         frames_val: u32,
         field_count_val: u32,
     ) !VideoTimeCode {
+        if (!fps_val.isValidFps()) return error.TimeCodeCreationFailed;
         const jam_ptr: ?*glib_c.GDateTime = if (latest_daily_jam) |dt| dt.ptr else null;
         const ptr = c.gst_video_time_code_new(
             @intCast(fps_val.numerator),
@@ -66,7 +67,7 @@ pub const VideoTimeCode = struct {
         flags_val: VideoTimeCodeFlags,
         field_count_val: u32,
     ) !VideoTimeCode {
-        std.debug.assert(fps_val.denominator > 0);
+        if (!fps_val.isValidFps()) return error.TimeCodeFromDateTimeFailed;
         const ptr = c.gst_video_time_code_new_from_date_time_full(
             @intCast(fps_val.numerator),
             @intCast(fps_val.denominator),
@@ -157,7 +158,8 @@ pub const VideoTimeCode = struct {
         self.ptr.field_count = val;
     }
 
-    pub fn setFps(self: VideoTimeCode, new_fps: Fraction) void {
+    pub fn setFps(self: VideoTimeCode, new_fps: Fraction) !void {
+        if (!new_fps.isValidFps()) return error.InvalidFps;
         self.ptr.config.fps_n = @intCast(new_fps.numerator);
         self.ptr.config.fps_d = @intCast(new_fps.denominator);
     }
@@ -354,7 +356,7 @@ pub const VideoTimeCodeMeta = struct {
         frames_val: u32,
         field_count_val: u32,
     ) ?VideoTimeCodeMeta {
-        if (!fps_val.isValid()) return null;
+        if (!fps_val.isValidFps()) return null;
         const buf_ptr: *c.GstBuffer = @ptrCast(buffer.ptr orelse @panic("VideoTimeCodeMeta.addToBufferFull() called on consumed Buffer"));
         const jam_ptr: ?*glib_c.GDateTime = if (latest_daily_jam) |dt| dt.ptr else null;
         const meta_ptr = c.gst_buffer_add_video_time_code_meta_full(
