@@ -354,7 +354,7 @@ pub const VideoTimeCodeMeta = struct {
         frames_val: u32,
         field_count_val: u32,
     ) ?VideoTimeCodeMeta {
-        std.debug.assert(fps_val.denominator > 0);
+        if (!fps_val.isValid()) return null;
         const buf_ptr: *c.GstBuffer = @ptrCast(buffer.ptr orelse @panic("VideoTimeCodeMeta.addToBufferFull() called on consumed Buffer"));
         const jam_ptr: ?*glib_c.GDateTime = if (latest_daily_jam) |dt| dt.ptr else null;
         const meta_ptr = c.gst_buffer_add_video_time_code_meta_full(
