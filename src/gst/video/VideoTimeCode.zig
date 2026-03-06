@@ -354,6 +354,7 @@ pub const VideoTimeCodeMeta = struct {
         frames_val: u32,
         field_count_val: u32,
     ) ?VideoTimeCodeMeta {
+        std.debug.assert(fps_val.denominator > 0);
         const buf_ptr: *c.GstBuffer = @ptrCast(buffer.ptr orelse @panic("VideoTimeCodeMeta.addToBufferFull() called on consumed Buffer"));
         const jam_ptr: ?*glib_c.GDateTime = if (latest_daily_jam) |dt| dt.ptr else null;
         const meta_ptr = c.gst_buffer_add_video_time_code_meta_full(
@@ -374,10 +375,10 @@ pub const VideoTimeCodeMeta = struct {
         return null;
     }
 
-    /// Get the timecode from this meta. The returned VideoTimeCode references
-    /// memory owned by the meta and must not be freed.
-    pub fn getTimeCode(self: VideoTimeCodeMeta) VideoTimeCode {
-        return VideoTimeCode.fromPtr(&self.ptr.tc);
+    /// Get the timecode from this meta. Returns an owned copy that the caller
+    /// must free with deinit().
+    pub fn getTimeCode(self: VideoTimeCodeMeta) !VideoTimeCode {
+        return VideoTimeCode.copy(.{ .ptr = &self.ptr.tc });
     }
 
     pub fn fromPtr(ptr: *c.GstVideoTimeCodeMeta) VideoTimeCodeMeta {
