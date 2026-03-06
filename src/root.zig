@@ -94,3 +94,4 @@ const video_time_code = @import("gst/video/VideoTimeCode.zig");
 pub const VideoTimeCode = video_time_code.VideoTimeCode;
 pub const VideoTimeCodeFlags = video_time_code.VideoTimeCodeFlags;
 pub const VideoTimeCodeInterval = video_time_code.VideoTimeCodeInterval;
+pub const VideoTimeCodeMeta = video_time_code.VideoTimeCodeMeta;

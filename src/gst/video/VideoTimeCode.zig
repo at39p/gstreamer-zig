@@ -33,6 +33,7 @@ pub const VideoTimeCode = struct {
         frames_val: u32,
         field_count_val: u32,
     ) !VideoTimeCode {
+        if (!fps_val.isValidFps()) return error.TimeCodeCreationFailed;
         const jam_ptr: ?*glib_c.GDateTime = if (latest_daily_jam) |dt| dt.ptr else null;
         const ptr = c.gst_video_time_code_new(
             @intCast(fps_val.numerator),
@@ -66,7 +67,7 @@ pub const VideoTimeCode = struct {
         flags_val: VideoTimeCodeFlags,
         field_count_val: u32,
     ) !VideoTimeCode {
-        std.debug.assert(fps_val.denominator > 0);
+        if (!fps_val.isValidFps()) return error.TimeCodeFromDateTimeFailed;
         const ptr = c.gst_video_time_code_new_from_date_time_full(
             @intCast(fps_val.numerator),
             @intCast(fps_val.denominator),
@@ -157,7 +158,8 @@ pub const VideoTimeCode = struct {
         self.ptr.field_count = val;
     }
 
-    pub fn setFps(self: VideoTimeCode, new_fps: Fraction) void {
+    pub fn setFps(self: VideoTimeCode, new_fps: Fraction) !void {
+        if (!new_fps.isValidFps()) return error.InvalidFps;
         self.ptr.config.fps_n = @intCast(new_fps.numerator);
         self.ptr.config.fps_d = @intCast(new_fps.denominator);
     }
@@ -317,5 +319,71 @@ pub const VideoTimeCodeInterval = struct {
             self.ptr.seconds,
             self.ptr.frames,
         });
+    }
+};
+
+pub const VideoTimeCodeMeta = struct {
+    ptr: *c.GstVideoTimeCodeMeta,
+
+    const Buffer = @import("../Buffer.zig").Buffer;
+
+    pub fn getFromBuffer(buffer: Buffer) ?VideoTimeCodeMeta {
+        const buf_ptr: *c.GstBuffer = @ptrCast(buffer.ptr orelse @panic("VideoTimeCodeMeta.getFromBuffer() called on consumed Buffer"));
+        const meta_ptr = c.gst_buffer_get_meta(buf_ptr, c.gst_video_time_code_meta_api_get_type());
+        if (meta_ptr) |ptr| {
+            return .{ .ptr = @ptrCast(ptr) };
+        }
+        return null;
+    }
+
+    pub fn addToBuffer(buffer: Buffer, tc: VideoTimeCode) ?VideoTimeCodeMeta {
+        const buf_ptr: *c.GstBuffer = @ptrCast(buffer.ptr orelse @panic("VideoTimeCodeMeta.addToBuffer() called on consumed Buffer"));
+        const meta_ptr = c.gst_buffer_add_video_time_code_meta(buf_ptr, tc.ptr);
+        if (meta_ptr) |ptr| {
+            return .{ .ptr = ptr };
+        }
+        return null;
+    }
+
+    pub fn addToBufferFull(
+        buffer: Buffer,
+        fps_val: Fraction,
+        latest_daily_jam: ?DateTime,
+        flags_val: VideoTimeCodeFlags,
+        hours_val: u32,
+        minutes_val: u32,
+        seconds_val: u32,
+        frames_val: u32,
+        field_count_val: u32,
+    ) ?VideoTimeCodeMeta {
+        if (!fps_val.isValidFps()) return null;
+        const buf_ptr: *c.GstBuffer = @ptrCast(buffer.ptr orelse @panic("VideoTimeCodeMeta.addToBufferFull() called on consumed Buffer"));
+        const jam_ptr: ?*glib_c.GDateTime = if (latest_daily_jam) |dt| dt.ptr else null;
+        const meta_ptr = c.gst_buffer_add_video_time_code_meta_full(
+            buf_ptr,
+            @intCast(fps_val.numerator),
+            @intCast(fps_val.denominator),
+            @ptrCast(jam_ptr),
+            @bitCast(flags_val),
+            hours_val,
+            minutes_val,
+            seconds_val,
+            frames_val,
+            field_count_val,
+        );
+        if (meta_ptr) |ptr| {
+            return .{ .ptr = ptr };
+        }
+        return null;
+    }
+
+    /// Get the timecode from this meta. Returns an owned copy that the caller
+    /// must free with deinit().
+    pub fn getTimeCode(self: VideoTimeCodeMeta) !VideoTimeCode {
+        return VideoTimeCode.copy(.{ .ptr = &self.ptr.tc });
+    }
+
+    pub fn fromPtr(ptr: *c.GstVideoTimeCodeMeta) VideoTimeCodeMeta {
+        return .{ .ptr = ptr };
     }
 };
