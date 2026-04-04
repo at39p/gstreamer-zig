@@ -1,4 +1,5 @@
 pub const c = @import("../c.zig").c;
+pub const DateTime = @import("DateTime.zig").DateTime;
 
 const GMainLoop = *c.GMainLoop;
 
