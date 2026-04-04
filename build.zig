@@ -1,7 +1,10 @@
 const std = @import("std");
 
-fn addGStreamerDeps(step: anytype, pkg_config_path: ?[]const u8, b: *std.Build) void {
-    const T = @TypeOf(step);
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const pkg_config_path = b.option([]const u8, "pkg_config_path", "Custom PKG_CONFIG_PATH for GStreamer");
 
     const framework_base = if (pkg_config_path) |path|
         if (std.mem.endsWith(u8, path, "/lib/pkgconfig"))
@@ -11,37 +14,19 @@ fn addGStreamerDeps(step: anytype, pkg_config_path: ?[]const u8, b: *std.Build) 
     else
         "/Library/Frameworks/GStreamer.framework/Versions/1.0";
 
-    const gst_include = b.fmt("{s}/include/gstreamer-1.0", .{framework_base});
-    const glib_include = b.fmt("{s}/include/glib-2.0", .{framework_base});
-    const glib_config_include = b.fmt("{s}/lib/glib-2.0/include", .{framework_base});
-    const base_include = b.fmt("{s}/include", .{framework_base});
-
-    // Add include paths to both compile steps and modules
-    step.addIncludePath(.{ .cwd_relative = gst_include });
-    step.addIncludePath(.{ .cwd_relative = glib_include });
-    step.addIncludePath(.{ .cwd_relative = glib_config_include });
-    step.addIncludePath(.{ .cwd_relative = base_include });
-
-    // Only link libraries for compile steps
-    if (T == *std.Build.Step.Compile) {
-        step.linkLibC();
-        step.linkSystemLibrary("gstapp-1.0");
-        step.linkSystemLibrary2("gstreamer-video-1.0", .{ .use_pkg_config = .force });
-    }
-}
-
-pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-
-    const pkg_config_path = b.option([]const u8, "pkg_config_path", "Custom PKG_CONFIG_PATH for GStreamer");
-
     const gstreamer_module = b.addModule("gstreamer", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
-    addGStreamerDeps(gstreamer_module, pkg_config_path, b);
+
+    gstreamer_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include/gstreamer-1.0", .{framework_base}) });
+    gstreamer_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include/glib-2.0", .{framework_base}) });
+    gstreamer_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/lib/glib-2.0/include", .{framework_base}) });
+    gstreamer_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{framework_base}) });
+
+    gstreamer_module.linkSystemLibrary("gstapp-1.0", .{});
+    gstreamer_module.linkSystemLibrary("gstreamer-pbutils-1.0", .{ .use_pkg_config = .force });
 
     const lib = b.addLibrary(.{
         .name = "gstreamer-zig",
@@ -52,13 +37,8 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-
-    addGStreamerDeps(lib, pkg_config_path, b);
-    addGStreamerDeps(gstreamer_module, pkg_config_path, b);
-
     b.installArtifact(lib);
 
-    // Examples
     const examples = [_]struct { name: []const u8, file: []const u8, description: []const u8, skip_install: bool = false }{
         .{ .name = "launch", .file = "launch.zig", .description = "Run the launch example" },
         .{ .name = "appsrc", .file = "appsrc.zig", .description = "Run the appsrc example" },
@@ -83,7 +63,6 @@ pub fn build(b: *std.Build) void {
             }),
         });
         example_exe.root_module.addImport("gst", gstreamer_module);
-        addGStreamerDeps(example_exe, pkg_config_path, b);
 
         if (!example.skip_install) {
             b.installArtifact(example_exe);
