@@ -39,9 +39,23 @@ pub const Clock = clock.Clock;
 pub const Sample = @import("gst/Sample.zig").Sample;
 pub const Buffer = @import("gst/Buffer.zig").Buffer;
 
-// App types
+// App plugin (libgstapp-1.0)
 pub const AppSink = @import("gst/app/AppSink.zig").AppSink;
 pub const AppSrc = @import("gst/app/AppSrc.zig").AppSrc;
+
+// Video plugin (libgstreamer-video-1.0)
+const video = @import("gst/video/video.zig");
+pub const VideoInfo = video.VideoInfo;
+pub const VideoFormat = video.VideoFormat;
+pub const VideoFormatInfo = video.VideoFormatInfo;
+pub const VideoFrame = video.VideoFrame;
+pub const VideoFrameFlags = video.VideoFrameFlags;
+
+// pbutils (libgstreamer-pbutils-1.0)
+const pbutils = @import("gst/pbutils/pbutils.zig");
+pub const Discoverer = pbutils.Discoverer;
+pub const DiscovererInfo = pbutils.DiscovererInfo;
+pub const DiscovererResult = pbutils.DiscovererResult;
 
 pub const State = core.State;
 pub const StateChangeReturn = core.StateChangeReturn;
@@ -79,19 +93,3 @@ pub const objectUnref = core.objectUnref;
 
 pub const macosMain = core.macosMain;
 pub const macosMainSimple = core.macosMainSimple;
-
-// Video namespace and types
-pub const video = @import("gst/video/video.zig");
-pub const videoframe = @import("gst/video/VideoFrame.zig");
-
-pub const VideoInfo = @import("gst/video/VideoInfo.zig").VideoInfo;
-pub const VideoFormat = @import("gst/video/VideoFormat.zig").VideoFormat;
-pub const VideoFormatInfo = @import("gst/video/VideoFormatInfo.zig").VideoFormatInfo;
-pub const VideoFrame = videoframe.VideoFrame;
-pub const VideoFrameFlags = videoframe.VideoFrameFlags;
-
-const video_time_code = @import("gst/video/VideoTimeCode.zig");
-pub const VideoTimeCode = video_time_code.VideoTimeCode;
-pub const VideoTimeCodeFlags = video_time_code.VideoTimeCodeFlags;
-pub const VideoTimeCodeInterval = video_time_code.VideoTimeCodeInterval;
-pub const VideoTimeCodeMeta = video_time_code.VideoTimeCodeMeta;
