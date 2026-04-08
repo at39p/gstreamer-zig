@@ -4,9 +4,12 @@ const c = pbutils.c_pbutils;
 
 pub const DiscovererStreamInfo = struct {
     ptr: *c.GstDiscovererStreamInfo,
+    owned: bool = true,
 
     pub fn deinit(self: DiscovererStreamInfo) void {
-        c.gst_discoverer_stream_info_unref(self.ptr);
+        if (self.owned) {
+            c.gst_discoverer_stream_info_unref(self.ptr);
+        }
     }
 
     pub fn getStreamId(self: DiscovererStreamInfo) ?[*:0]const u8 {
@@ -27,7 +30,7 @@ pub const DiscovererStreamInfoIterator = struct {
         const list = self.current orelse return null;
         const ptr: *c.GstDiscovererStreamInfo = @ptrCast(@alignCast(list.*.data));
         self.current = list.*.next;
-        return .{ .ptr = ptr };
+        return .{ .ptr = ptr, .owned = false };
     }
 };
 
