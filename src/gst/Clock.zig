@@ -27,14 +27,14 @@ pub const Clock = struct {
         c.gst_object_unref(@ptrCast(self.ptr));
     }
 
-    /// Get the current time of the clock in nanoseconds
+    /// Get the current time of the clock
     /// Returns null if the clock is invalid or not synchronized
-    pub inline fn getTime(self: Clock) ?u64 {
+    pub inline fn getTime(self: Clock) ?ClockTime {
         const time = c.gst_clock_get_time(self.ptr);
-        if (time == TIME_NONE) {
+        if (time == TIME_NONE.nanoseconds) {
             return null;
         }
-        return time;
+        return @bitCast(time);
     }
 
     pub inline fn getResolution(self: Clock) u64 {
