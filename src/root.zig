@@ -56,7 +56,9 @@ const pbutils = @import("gst/pbutils/pbutils.zig");
 pub const Discoverer = pbutils.Discoverer;
 pub const DiscovererInfo = pbutils.DiscovererInfo;
 pub const DiscovererResult = pbutils.DiscovererResult;
+pub const DiscovererStreamInfo = pbutils.DiscovererStreamInfo;
 
+pub const ClockTime = clock.ClockTime;
 pub const State = core.State;
 pub const StateChangeReturn = core.StateChangeReturn;
 pub const GetStateResult = Element.GetStateResult;

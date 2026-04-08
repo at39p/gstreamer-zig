@@ -1,10 +1,12 @@
 const std = @import("std");
 const core = @import("core.zig");
 const message = @import("Message.zig");
+const clock = @import("Clock.zig");
 
 const c = core.c;
 const GstBus = core.GstBus;
 const GstMessage = core.GstMessage;
+const ClockTime = clock.ClockTime;
 
 pub const Bus = struct {
     ptr: GstBus,
@@ -13,8 +15,8 @@ pub const Bus = struct {
         c.gst_object_unref(@ptrCast(self.ptr));
     }
 
-    pub fn popMessage(self: Bus, timeout: u64, types: message.MessageType) ?message.Message {
-        if (c.gst_bus_timed_pop_filtered(self.ptr, timeout, @intFromEnum(types))) |msg| {
+    pub fn popMessage(self: Bus, timeout: ClockTime, types: message.MessageType) ?message.Message {
+        if (c.gst_bus_timed_pop_filtered(self.ptr, @bitCast(timeout), @intFromEnum(types))) |msg| {
             return message.Message{ .ptr = msg };
         }
         return null;
@@ -50,16 +52,16 @@ pub const Bus = struct {
     }
 
     // Poll for messages with timeout
-    pub fn poll(self: Bus, events: message.MessageType, timeout: u64) ?message.Message {
-        if (c.gst_bus_poll(self.ptr, @intFromEnum(events), timeout)) |msg| {
+    pub fn poll(self: Bus, events: message.MessageType, timeout: ClockTime) ?message.Message {
+        if (c.gst_bus_poll(self.ptr, @intFromEnum(events), @bitCast(timeout))) |msg| {
             return message.Message{ .ptr = msg };
         }
         return null;
     }
 
     // Timed pop without filtering
-    pub fn timedPop(self: Bus, timeout: u64) ?message.Message {
-        if (c.gst_bus_timed_pop(self.ptr, timeout)) |msg| {
+    pub fn timedPop(self: Bus, timeout: ClockTime) ?message.Message {
+        if (c.gst_bus_timed_pop(self.ptr, @bitCast(timeout))) |msg| {
             return message.Message{ .ptr = msg };
         }
         return null;

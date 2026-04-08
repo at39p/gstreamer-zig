@@ -63,6 +63,14 @@ pub const Caps = struct {
         return c.gst_caps_to_string(ptr);
     }
 
+    /// Returns a Zig-allocated copy of the caps string. Caller must free with allocator.free().
+    pub fn toStringAlloc(self: Caps, allocator: std.mem.Allocator) ![]const u8 {
+        const ptr = self.ptr orelse @panic("Caps.toStringAlloc() called on consumed Caps - cannot convert to string caps that were already passed to a function taking ownership");
+        const glib_str = c.gst_caps_to_string(ptr);
+        defer c.g_free(glib_str);
+        return allocator.dupe(u8, std.mem.span(glib_str));
+    }
+
     pub inline fn isFixed(self: Caps) bool {
         const ptr = self.ptr orelse @panic("Caps.isFixed() called on consumed Caps - cannot check if caps are fixed after being passed to a function taking ownership");
         return c.gst_caps_is_fixed(ptr) != 0;

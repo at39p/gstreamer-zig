@@ -4,8 +4,6 @@ const core = @import("core.zig");
 const c = core.c;
 const GstClock = core.GstClock;
 
-pub const TIME_NONE: u64 = c.GST_CLOCK_TIME_NONE;
-
 pub const Return = enum(c_int) {
     ok = c.GST_CLOCK_OK,
     early = c.GST_CLOCK_EARLY,
@@ -29,14 +27,14 @@ pub const Clock = struct {
         c.gst_object_unref(@ptrCast(self.ptr));
     }
 
-    /// Get the current time of the clock in nanoseconds
+    /// Get the current time of the clock
     /// Returns null if the clock is invalid or not synchronized
-    pub inline fn getTime(self: Clock) ?u64 {
+    pub inline fn getTime(self: Clock) ?ClockTime {
         const time = c.gst_clock_get_time(self.ptr);
-        if (time == TIME_NONE) {
+        if (time == TIME_NONE.nanoseconds) {
             return null;
         }
-        return time;
+        return @bitCast(time);
     }
 
     pub inline fn getResolution(self: Clock) u64 {
@@ -47,3 +45,30 @@ pub const Clock = struct {
         return c.gst_clock_set_resolution(self.ptr, resolution);
     }
 };
+
+pub const ClockTime = packed struct(u64) {
+    nanoseconds: u64,
+
+    pub fn fromSeconds(s: u64) ClockTime {
+        return .{ .nanoseconds = s * 1_000_000_000 };
+    }
+
+    pub fn fromMseconds(ms: u64) ClockTime {
+        return .{ .nanoseconds = ms * 1_000_000 };
+    }
+
+    pub fn fromNseconds(ns: u64) ClockTime {
+        return .{ .nanoseconds = ns };
+    }
+
+    pub fn format(self: ClockTime, writer: anytype) !void {
+        const ns = self.nanoseconds % 1_000_000_000;
+        const total_s = self.nanoseconds / 1_000_000_000;
+        const s = total_s % 60;
+        const m = (total_s / 60) % 60;
+        const h = total_s / 3600;
+        try writer.print("{d}:{d:0>2}:{d:0>2}.{d:0>9}", .{ h, m, s, ns });
+    }
+};
+
+pub const TIME_NONE: ClockTime = .{ .nanoseconds = c.GST_CLOCK_TIME_NONE };

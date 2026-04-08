@@ -1,6 +1,8 @@
 const pbutils = @import("pbutils.zig");
 const video_info = @import("DiscovererVideoInfo.zig");
 const audio_info = @import("DiscovererAudioInfo.zig");
+const stream_info = @import("DiscovererStreamInfo.zig");
+const ClockTime = @import("../Clock.zig").ClockTime;
 
 const c = pbutils.c_pbutils;
 
@@ -28,8 +30,8 @@ pub const DiscovererInfo = struct {
         return c.gst_discoverer_info_get_uri(self.ptr);
     }
 
-    pub fn getDuration(self: DiscovererInfo) u64 {
-        return c.gst_discoverer_info_get_duration(self.ptr);
+    pub fn getDuration(self: DiscovererInfo) ClockTime {
+        return @bitCast(c.gst_discoverer_info_get_duration(self.ptr));
     }
 
     pub fn isSeekable(self: DiscovererInfo) bool {
@@ -38,6 +40,25 @@ pub const DiscovererInfo = struct {
 
     pub fn isLive(self: DiscovererInfo) bool {
         return c.gst_discoverer_info_get_live(self.ptr) != 0;
+    }
+
+    /// Returns a tag list string allocated by GStreamer. Caller must free with g_free.
+    pub fn getTagsString(self: DiscovererInfo) ?[*:0]u8 {
+        const tags = c.gst_discoverer_info_get_tags(self.ptr) orelse return null;
+        return c.gst_tag_list_to_string(tags);
+    }
+
+    /// Returns the top-level stream info. Caller must call deinit().
+    pub fn getStreamInfo(self: DiscovererInfo) ?stream_info.DiscovererStreamInfo {
+        const s = c.gst_discoverer_info_get_stream_info(self.ptr) orelse return null;
+        return .{ .ptr = s };
+    }
+
+    /// Returns all streams as a flat list. Caller must call deinit() on the
+    /// returned DiscovererStreamInfoList. Individual items from the iterator
+    /// are borrowed references into the list and must not be individually deinitialized.
+    pub fn getStreamList(self: DiscovererInfo) stream_info.DiscovererStreamInfoList {
+        return .{ .ptr = c.gst_discoverer_info_get_stream_list(self.ptr) };
     }
 
     pub fn getVideoStreams(self: DiscovererInfo) video_info.DiscovererVideoInfoList {
