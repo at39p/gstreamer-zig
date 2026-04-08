@@ -1,5 +1,6 @@
 const std = @import("std");
 const pbutils = @import("pbutils.zig");
+const Clock = @import("../Clock.zig");
 const DiscovererInfo = @import("DiscovererInfo.zig").DiscovererInfo;
 
 const c = pbutils.c_pbutils;
@@ -7,9 +8,9 @@ const c = pbutils.c_pbutils;
 pub const Discoverer = struct {
     ptr: *c.GstDiscoverer,
 
-    pub fn init(timeout_ns: u64) !Discoverer {
+    pub fn init(timeout: Clock.ClockTime) !Discoverer {
         var err: ?*c.GError = null;
-        const ptr = c.gst_discoverer_new(timeout_ns, &err);
+        const ptr = c.gst_discoverer_new(@bitCast(timeout), &err);
         if (ptr == null) {
             if (err) |e| {
                 std.log.err("Failed to create discoverer: {s}", .{e.message});
