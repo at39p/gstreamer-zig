@@ -54,7 +54,9 @@ pub const DiscovererInfo = struct {
         return .{ .ptr = s };
     }
 
-    /// Returns all streams as a flat list. Caller must call deinit().
+    /// Returns all streams as a flat list. Caller must call deinit() on the
+    /// returned DiscovererStreamInfoList. Individual items from the iterator
+    /// are borrowed references into the list and must not be individually deinitialized.
     pub fn getStreamList(self: DiscovererInfo) stream_info.DiscovererStreamInfoList {
         return .{ .ptr = c.gst_discoverer_info_get_stream_list(self.ptr) };
     }
