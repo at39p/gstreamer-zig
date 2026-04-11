@@ -25,9 +25,12 @@ pub const Discoverer = struct {
         c.g_object_unref(@ptrCast(self.ptr));
     }
 
-    pub fn discoverUri(self: Discoverer, uri: [*:0]const u8) !DiscovererInfo {
+    pub fn discoverUri(self: Discoverer, allocator: std.mem.Allocator, uri: []const u8) !DiscovererInfo {
+        const uri_z = try allocator.dupeZ(u8, uri);
+        defer allocator.free(uri_z);
+
         var err: ?*c.GError = null;
-        const info = c.gst_discoverer_discover_uri(self.ptr, uri, &err);
+        const info = c.gst_discoverer_discover_uri(self.ptr, uri_z.ptr, &err);
         if (info == null) {
             if (err) |e| {
                 std.log.err("Discovery failed for '{s}': {s}", .{ uri, e.message });
@@ -39,8 +42,11 @@ pub const Discoverer = struct {
     }
 
     /// Asynchronously queue a URI for discovery. Must call start() first.
-    pub fn discoverUriAsync(self: Discoverer, uri: [*:0]const u8) bool {
-        return c.gst_discoverer_discover_uri_async(self.ptr, uri) != 0;
+    pub fn discoverUriAsync(self: Discoverer, allocator: std.mem.Allocator, uri: []const u8) !bool {
+        const uri_z = try allocator.dupeZ(u8, uri);
+        defer allocator.free(uri_z);
+
+        return c.gst_discoverer_discover_uri_async(self.ptr, uri_z.ptr) != 0;
     }
 
     pub fn start(self: Discoverer) void {

@@ -79,7 +79,7 @@ fn run() !void {
     const discoverer = try gst.Discoverer.init(gst.ClockTime.fromSeconds(15));
     defer discoverer.deinit();
 
-    const info = try discoverer.discoverUri(args[1]);
+    const info = try discoverer.discoverUri(allocator, args[1]);
     defer info.deinit();
 
     if (info.getResult() != .ok) {
