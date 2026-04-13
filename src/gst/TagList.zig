@@ -39,11 +39,12 @@ pub const TagList = struct {
     }
 
     /// Type-safe tag access. The tag's ValueType determines the return type.
-    /// All returned values are borrowed from the tag list (valid for its lifetime).
+    /// Strings and numeric values are borrowed from the tag list (valid for its lifetime).
+    /// DateTime is returned as an owned reference — caller must call deinit().
     /// Usage:
     ///   if (tags.get(.title)) |title| { ... }       // ?[]const u8
     ///   if (tags.get(.bitrate)) |br| { ... }         // ?u32
-    ///   if (tags.get(.date_time)) |dt| { ... }       // ?DateTime
+    ///   if (tags.get(.date_time)) |dt| { defer dt.deinit(); ... }
     pub fn get(self: TagList, comptime tag: Tag) ?tag.ValueType {
         switch (tag.ValueType) {
             []const u8 => {
@@ -52,8 +53,8 @@ pub const TagList = struct {
                 return std.mem.span(value);
             },
             DateTime => {
-                const gvalue = c.gst_tag_list_get_value_index(self.ptr, tag.name, 0) orelse return null;
-                const dt: ?*c.GstDateTime = @ptrCast(@alignCast(c.g_value_get_boxed(gvalue)));
+                var dt: ?*c.GstDateTime = null;
+                if (c.gst_tag_list_get_date_time(self.ptr, tag.name, &dt) == 0) return null;
                 return .{ .ptr = dt orelse return null };
             },
             u32 => {

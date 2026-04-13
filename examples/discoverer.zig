@@ -37,6 +37,7 @@ fn printTags(info: gst.DiscovererInfo, allocator: std.mem.Allocator) !void {
         std.debug.print("  Max bitrate: {d} kbps\n", .{br / 1000});
     }
     if (tags.get(.date_time)) |dt| {
+        defer dt.deinit();
         const str = dt.toIso8601(allocator) catch return;
         defer allocator.free(str);
         std.debug.print("  Date/Time: {s}\n", .{str});
