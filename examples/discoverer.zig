@@ -38,7 +38,7 @@ fn printTags(info: gst.DiscovererInfo, allocator: std.mem.Allocator) !void {
     }
     if (tags.get(.date_time)) |dt| {
         defer dt.deinit();
-        const str = dt.toIso8601(allocator) catch return;
+        const str = try dt.toIso8601(allocator);
         defer allocator.free(str);
         std.debug.print("  Date/Time: {s}\n", .{str});
     }
