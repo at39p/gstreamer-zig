@@ -51,6 +51,11 @@ pub const VideoFormatInfo = video.VideoFormatInfo;
 pub const VideoFrame = video.VideoFrame;
 pub const VideoFrameFlags = video.VideoFrameFlags;
 
+// Core types - tags, datetime
+pub const Tag = @import("gst/Tag.zig").Tag;
+pub const TagList = @import("gst/TagList.zig").TagList;
+pub const DateTime = @import("gst/DateTime.zig").DateTime;
+
 // pbutils (libgstreamer-pbutils-1.0)
 const pbutils = @import("gst/pbutils/pbutils.zig");
 pub const Discoverer = pbutils.Discoverer;
