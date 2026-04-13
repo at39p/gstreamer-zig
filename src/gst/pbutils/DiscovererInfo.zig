@@ -1,7 +1,10 @@
+const std = @import("std");
 const pbutils = @import("pbutils.zig");
 const video_info = @import("DiscovererVideoInfo.zig");
 const audio_info = @import("DiscovererAudioInfo.zig");
 const stream_info = @import("DiscovererStreamInfo.zig");
+
+const TagList = @import("../TagList.zig").TagList;
 const ClockTime = @import("../Clock.zig").ClockTime;
 
 const c = pbutils.c_pbutils;
@@ -42,10 +45,17 @@ pub const DiscovererInfo = struct {
         return c.gst_discoverer_info_get_live(self.ptr) != 0;
     }
 
-    /// Returns a tag list string allocated by GStreamer. Caller must free with g_free.
-    pub fn getTagsString(self: DiscovererInfo) ?[*:0]u8 {
+    /// Returns the tag list. The returned TagList is borrowed from the
+    /// DiscovererInfo and valid for its lifetime.
+    pub fn getTags(self: DiscovererInfo) ?TagList {
         const tags = c.gst_discoverer_info_get_tags(self.ptr) orelse return null;
-        return c.gst_tag_list_to_string(tags);
+        return .{ .ptr = @ptrCast(@constCast(tags)), .owned = false };
+    }
+
+    /// Returns a Zig-allocated string of all tags. Caller must free with allocator.free().
+    pub fn getTagsString(self: DiscovererInfo, allocator: std.mem.Allocator) ?[]const u8 {
+        const tags = self.getTags() orelse return null;
+        return tags.toStringAlloc(allocator) catch return null;
     }
 
     /// Returns the top-level stream info. Caller must call deinit().

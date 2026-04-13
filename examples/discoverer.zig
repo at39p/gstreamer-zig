@@ -11,13 +11,36 @@
 const std = @import("std");
 const gst = @import("gst");
 
-fn printTags(info: gst.DiscovererInfo) void {
+fn printTags(info: gst.DiscovererInfo, allocator: std.mem.Allocator) !void {
     std.debug.print("Tags:\n", .{});
-    if (info.getTagsString()) |tags| {
-        defer gst.c.g_free(tags);
-        std.debug.print("  {s}\n", .{tags});
-    } else {
+    const tags = info.getTags() orelse {
         std.debug.print("  no tags\n", .{});
+        return;
+    };
+
+    if (tags.get(.video_codec)) |codec| {
+        std.debug.print("  Video codec: {s}\n", .{codec});
+    }
+    if (tags.get(.audio_codec)) |codec| {
+        std.debug.print("  Audio codec: {s}\n", .{codec});
+    }
+    if (tags.get(.container_format)) |format| {
+        std.debug.print("  Container: {s}\n", .{format});
+    }
+    if (tags.get(.encoder)) |enc| {
+        std.debug.print("  Encoder: {s}\n", .{enc});
+    }
+    if (tags.get(.bitrate)) |br| {
+        std.debug.print("  Bitrate: {d} kbps\n", .{br / 1000});
+    }
+    if (tags.get(.maximum_bitrate)) |br| {
+        std.debug.print("  Max bitrate: {d} kbps\n", .{br / 1000});
+    }
+    if (tags.get(.date_time)) |dt| {
+        defer dt.deinit();
+        const str = try dt.toIso8601(allocator);
+        defer allocator.free(str);
+        std.debug.print("  Date/Time: {s}\n", .{str});
     }
 }
 
@@ -45,7 +68,7 @@ fn printDiscovererInfo(info: gst.DiscovererInfo, allocator: std.mem.Allocator) !
     std.debug.print("URI: {s}\n", .{info.getUri()});
     std.debug.print("Duration: {f}\n", .{info.getDuration()});
 
-    printTags(info);
+    try printTags(info, allocator);
 
     const top_stream = info.getStreamInfo() orelse return error.NoStreamInfo;
     defer top_stream.deinit();
