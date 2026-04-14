@@ -20,6 +20,30 @@ pub const DiscovererVideoInfo = struct {
         return c.gst_discoverer_video_info_get_framerate_denom(self.ptr);
     }
 
+    pub fn getDepth(self: DiscovererVideoInfo) u32 {
+        return c.gst_discoverer_video_info_get_depth(self.ptr);
+    }
+
+    pub fn getParNum(self: DiscovererVideoInfo) u32 {
+        return c.gst_discoverer_video_info_get_par_num(self.ptr);
+    }
+
+    pub fn getParDenom(self: DiscovererVideoInfo) u32 {
+        return c.gst_discoverer_video_info_get_par_denom(self.ptr);
+    }
+
+    pub fn isInterlaced(self: DiscovererVideoInfo) bool {
+        return c.gst_discoverer_video_info_is_interlaced(self.ptr) != 0;
+    }
+
+    pub fn getBitrate(self: DiscovererVideoInfo) u32 {
+        return c.gst_discoverer_video_info_get_bitrate(self.ptr);
+    }
+
+    pub fn getMaxBitrate(self: DiscovererVideoInfo) u32 {
+        return c.gst_discoverer_video_info_get_max_bitrate(self.ptr);
+    }
+
     pub fn isImage(self: DiscovererVideoInfo) bool {
         return c.gst_discoverer_video_info_is_image(self.ptr) != 0;
     }

@@ -19,6 +19,18 @@ pub const DiscovererAudioInfo = struct {
     pub fn getMaxBitrate(self: DiscovererAudioInfo) u32 {
         return c.gst_discoverer_audio_info_get_max_bitrate(self.ptr);
     }
+
+    pub fn getDepth(self: DiscovererAudioInfo) u32 {
+        return c.gst_discoverer_audio_info_get_depth(self.ptr);
+    }
+
+    pub fn getChannelMask(self: DiscovererAudioInfo) u64 {
+        return c.gst_discoverer_audio_info_get_channel_mask(self.ptr);
+    }
+
+    pub fn getLanguage(self: DiscovererAudioInfo) ?[*:0]const u8 {
+        return c.gst_discoverer_audio_info_get_language(self.ptr);
+    }
 };
 
 pub const DiscovererAudioInfoIterator = struct {
