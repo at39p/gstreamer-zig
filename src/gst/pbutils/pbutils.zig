@@ -1,6 +1,4 @@
-pub const c_pbutils = @cImport({
-    @cInclude("gst/pbutils/pbutils.h");
-});
+pub const c_pbutils = @import("c");
 
 pub const Discoverer = @import("Discoverer.zig").Discoverer;
 pub const DiscovererInfo = @import("DiscovererInfo.zig").DiscovererInfo;

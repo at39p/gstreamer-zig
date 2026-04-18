@@ -204,7 +204,7 @@ pub const Element = struct {
 
     test "connect" {}
 
-    pub fn connectSwapped(self: Element, signal_name: [*:0]const u8, callback: *const fn () callconv(.C) void, user_data: ?*anyopaque) !u64 {
+    pub fn connectSwapped(self: Element, signal_name: [*:0]const u8, callback: *const fn () callconv(.c) void, user_data: ?*anyopaque) !u64 {
         const id = c.g_signal_connect_data(@ptrCast(self.ptr), signal_name, @ptrCast(callback), user_data, null, c.G_CONNECT_SWAPPED);
         if (id == 0) {
             return error.SignalConnectionFailed;

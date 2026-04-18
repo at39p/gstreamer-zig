@@ -2,13 +2,8 @@ const std = @import("std");
 const gst = @import("gst");
 const glib = gst.glib;
 
-fn run() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+fn run(init: std.process.Init) !void {
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len < 2) {
         return error.MissingPipelineArgument;
@@ -64,6 +59,6 @@ fn run() !void {
     std.debug.print("Main loop finished\n", .{});
 }
 
-pub fn main() !void {
-    try gst.macosMainSimple(run);
+pub fn main(init: std.process.Init) !void {
+    try gst.macosMainSimple(run, init);
 }

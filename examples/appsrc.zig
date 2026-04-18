@@ -155,5 +155,5 @@ fn run() !void {
 }
 
 pub fn main() !void {
-    try gst.macosMainSimple(run);
+    try gst.macosMainSimple(run, null);
 }

@@ -14,16 +14,29 @@ pub fn build(b: *std.Build) void {
     else
         "/Library/Frameworks/GStreamer.framework/Versions/1.0";
 
+    // Translate C headers to Zig (replaces @cImport which is deprecated in Zig 0.16)
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/c_gst.h"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
+    translate_c.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include/gstreamer-1.0", .{framework_base}) });
+    translate_c.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include/glib-2.0", .{framework_base}) });
+    translate_c.addIncludePath(.{ .cwd_relative = b.fmt("{s}/lib/glib-2.0/include", .{framework_base}) });
+    translate_c.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{framework_base}) });
+
+    const c_module = translate_c.createModule();
+
     const gstreamer_module = b.addModule("gstreamer", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "c", .module = c_module },
+        },
     });
-
-    gstreamer_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include/gstreamer-1.0", .{framework_base}) });
-    gstreamer_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include/glib-2.0", .{framework_base}) });
-    gstreamer_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/lib/glib-2.0/include", .{framework_base}) });
-    gstreamer_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{framework_base}) });
 
     gstreamer_module.linkSystemLibrary("gstapp-1.0", .{});
     gstreamer_module.linkSystemLibrary("gstreamer-pbutils-1.0", .{ .use_pkg_config = .force });
@@ -31,13 +44,17 @@ pub fn build(b: *std.Build) void {
     const lib = b.addLibrary(.{
         .name = "gstreamer-zig",
         .linkage = .static,
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/root.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
+        .root_module = gstreamer_module,
     });
     b.installArtifact(lib);
+
+    const check = b.step("check", "Check if project compiles (for ZLS build-on-save)");
+    const lib_check = b.addLibrary(.{
+        .name = "gstreamer-zig-check",
+        .linkage = .static,
+        .root_module = gstreamer_module,
+    });
+    check.dependOn(&lib_check.step);
 
     const examples = [_]struct { name: []const u8, file: []const u8, description: []const u8, skip_install: bool = false }{
         .{ .name = "launch", .file = "launch.zig", .description = "Run the launch example" },
@@ -55,18 +72,28 @@ pub fn build(b: *std.Build) void {
         const source_path = std.fmt.allocPrint(b.allocator, "examples/{s}", .{example.file}) catch @panic("OOM");
         const step_name = std.fmt.allocPrint(b.allocator, "run-{s}", .{example.name}) catch @panic("OOM");
 
+        const example_module = b.createModule(.{
+            .root_source_file = b.path(source_path),
+            .target = target,
+            .optimize = optimize,
+        });
+        example_module.addImport("gst", gstreamer_module);
+
         const example_exe = b.addExecutable(.{
             .name = exe_name,
-            .root_module = b.createModule(.{
-                .root_source_file = b.path(source_path),
-                .target = target,
-                .optimize = optimize,
-            }),
+            .root_module = example_module,
         });
-        example_exe.root_module.addImport("gst", gstreamer_module);
 
         if (!example.skip_install) {
             b.installArtifact(example_exe);
+        }
+
+        if (!example.skip_install) {
+            const example_check = b.addExecutable(.{
+                .name = std.fmt.allocPrint(b.allocator, "{s}-check", .{exe_name}) catch @panic("OOM"),
+                .root_module = example_module,
+            });
+            check.dependOn(&example_check.step);
         }
 
         const example_run_cmd = b.addRunArtifact(example_exe);
