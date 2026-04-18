@@ -84,13 +84,11 @@ fn printDiscovererInfo(info: gst.DiscovererInfo, allocator: std.mem.Allocator) !
     }
 }
 
-fn run() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+fn run(init: std.process.Init) !void {
+    const allocator = init.gpa;
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const args = try init.minimal.args.toSlice(allocator);
+    defer allocator.free(args);
 
     if (args.len < 2) {
         return error.MissingUriArgument;
@@ -113,6 +111,6 @@ fn run() !void {
     try printDiscovererInfo(info, allocator);
 }
 
-pub fn main() !void {
-    try gst.macosMainSimple(run);
+pub fn main(init: std.process.Init) !void {
+    try gst.macosMainSimple(run, init);
 }

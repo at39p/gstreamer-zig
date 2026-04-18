@@ -5,10 +5,8 @@ const contextData = struct {
     queue: gst.Element,
 };
 
-fn run() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+fn run(init: std.process.Init) !void {
+    const allocator = init.gpa;
 
     try gst.init_check(null);
     defer gst.deinit();
@@ -137,6 +135,6 @@ fn pad_added_handler(element: gst.Element, new_pad: gst.Pad, user_data: ?*anyopa
     std.debug.print("Successfully linked {s} to queue\n", .{name});
 }
 
-pub fn main() !void {
-    try gst.macosMainSimple(run);
+pub fn main(init: std.process.Init) !void {
+    try gst.macosMainSimple(run, init);
 }

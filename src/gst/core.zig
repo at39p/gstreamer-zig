@@ -89,28 +89,54 @@ pub inline fn objectUnref(object: anytype) void {
 }
 
 // macOS specific funcs
-fn macosMakeWrapper(comptime func: fn () anyerror!void) fn (?*anyopaque) callconv(.c) c_int {
+fn macosMakeWrapper(comptime func: anytype) fn (?*anyopaque) callconv(.c) c_int {
+    const F = @TypeOf(func);
+    const params = @typeInfo(F).@"fn".params;
+    const takes_init = comptime (params.len == 1 and params[0].type == std.process.Init);
+
     const Wrapper = struct {
-        fn runImpl(_: ?*anyopaque) callconv(.c) c_int {
-            func() catch |err| {
-                std.debug.print("Error: {}\n", .{err});
-                return -1;
-            };
+        fn runImpl(user_data: ?*anyopaque) callconv(.c) c_int {
+            if (takes_init) {
+                const init_ptr: *std.process.Init = @ptrCast(@alignCast(user_data orelse @panic("macosMain: null user_data")));
+                func(init_ptr.*) catch |err| {
+                    std.debug.print("Error: {}\n", .{err});
+                    return -1;
+                };
+            } else {
+                func() catch |err| {
+                    std.debug.print("Error: {}\n", .{err});
+                    return -1;
+                };
+            }
             return 0;
         }
     };
     return Wrapper.runImpl;
 }
 
-pub fn macosMain(comptime func: fn () anyerror!void, argc: c_int, argv: [*c][*c]u8) !void {
-    if (c.gst_macos_main(macosMakeWrapper(func), argc, argv, null) != 0) {
-        return error.GstMacOsMainFailed;
+pub fn macosMain(comptime func: anytype, argc: c_int, argv: [*c][*c]u8, process_init: ?std.process.Init) !void {
+    if (process_init) |pi| {
+        var pi_mut = pi;
+        if (c.gst_macos_main(macosMakeWrapper(func), argc, argv, @ptrCast(&pi_mut)) != 0) {
+            return error.GstMacOsMainFailed;
+        }
+    } else {
+        if (c.gst_macos_main(macosMakeWrapper(func), argc, argv, null) != 0) {
+            return error.GstMacOsMainFailed;
+        }
     }
 }
 
-pub fn macosMainSimple(comptime func: fn () anyerror!void) !void {
-    if (c.gst_macos_main_simple(macosMakeWrapper(func), null) != 0) {
-        return error.GstMacOsMainFailed;
+pub fn macosMainSimple(comptime func: anytype, process_init: ?std.process.Init) !void {
+    if (process_init) |pi| {
+        var pi_mut = pi;
+        if (c.gst_macos_main_simple(macosMakeWrapper(func), @ptrCast(&pi_mut)) != 0) {
+            return error.GstMacOsMainFailed;
+        }
+    } else {
+        if (c.gst_macos_main_simple(macosMakeWrapper(func), null) != 0) {
+            return error.GstMacOsMainFailed;
+        }
     }
 }
 

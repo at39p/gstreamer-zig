@@ -39,6 +39,7 @@ pub const MessageType = enum(c_int) {
     need_context = c.GST_MESSAGE_NEED_CONTEXT,
     have_context = c.GST_MESSAGE_HAVE_CONTEXT,
     any = c.GST_MESSAGE_ANY,
+    _,
 };
 
 pub const Message = struct {
@@ -54,11 +55,7 @@ pub const Message = struct {
 
     pub fn getType(self: Message) MessageType {
         const ptr = self.ptr orelse @panic("Message.getType() called on consumed Message - cannot get type of a message that was already passed to a function taking ownership");
-        const raw_type = ptr.*.type;
-        return std.meta.intToEnum(MessageType, raw_type) catch {
-            std.debug.print("Unknown message type: {}\n", .{raw_type});
-            return MessageType.unknown;
-        };
+        return @enumFromInt(ptr.*.type);
     }
 
     pub fn parseErrorAndPrint(self: Message) !bool {
