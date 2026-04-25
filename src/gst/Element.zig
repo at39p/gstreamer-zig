@@ -91,6 +91,18 @@ pub const Element = struct {
             i64, c_long => {
                 c.g_object_set(@ptrCast(self.ptr), property_name, @as(c_long, value), @as(?*anyopaque, null));
             },
+            i8, i16 => {
+                c.g_object_set(@ptrCast(self.ptr), property_name, @as(c_int, value), @as(?*anyopaque, null));
+            },
+            isize => {
+                c.g_object_set(@ptrCast(self.ptr), property_name, @as(c_long, value), @as(?*anyopaque, null));
+            },
+            u8, u16, u32, c_uint => {
+                c.g_object_set(@ptrCast(self.ptr), property_name, @as(c_uint, value), @as(?*anyopaque, null));
+            },
+            u64, c_ulong, usize => {
+                c.g_object_set(@ptrCast(self.ptr), property_name, @as(c_ulong, value), @as(?*anyopaque, null));
+            },
             f64 => {
                 c.g_object_set(@ptrCast(self.ptr), property_name, @as(f64, value), @as(?*anyopaque, null));
             },
