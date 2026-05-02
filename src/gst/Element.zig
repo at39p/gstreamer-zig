@@ -82,7 +82,7 @@ pub const Element = struct {
     pub fn setProperty(self: Element, property_name: [*:0]const u8, value: anytype) void {
         const ValueType = @TypeOf(value);
         switch (ValueType) {
-            []const u8, [*:0]const u8 => {
+            [*:0]const u8 => {
                 c.gst_util_set_object_arg(@ptrCast(self.ptr), property_name, value);
             },
             i32, c_int => {

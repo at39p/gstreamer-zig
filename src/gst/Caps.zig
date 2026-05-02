@@ -200,7 +200,7 @@ pub const CapsBuilder = struct {
             comptime_float => {
                 c.gst_structure_set(structure, name, c.G_TYPE_DOUBLE, @as(f64, value), @as(?*anyopaque, null));
             },
-            []const u8, [*:0]const u8 => {
+            [*:0]const u8 => {
                 c.gst_structure_set(structure, name, c.G_TYPE_STRING, value, @as(?*anyopaque, null));
             },
             bool => {
