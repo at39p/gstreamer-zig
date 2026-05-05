@@ -15,9 +15,8 @@ fn run(init: std.process.Init) !void {
     defer pipeline.deinit();
 
     // Create elements
-    const source = try gst.Element.factory("srtsrc")
-        .property("uri", "srt://127.0.0.1:7001?mode=caller&latency=20&buffer-size=8192")
-        .build();
+    const source = try gst.Element.init("srtsrc", null);
+    source.set(.{ .uri = "srt://127.0.0.1:7001?mode=caller&latency=20&buffer-size=8192" });
 
     var queues = std.array_list.Managed(gst.Element).init(allocator);
     defer queues.deinit();
@@ -26,12 +25,12 @@ fn run(init: std.process.Init) !void {
         const queueName = try std.fmt.allocPrintSentinel(allocator, "queue{d}", .{i}, 0);
         defer allocator.free(queueName);
 
-        const queue = try gst.Element.factory("queue")
-            .name(queueName)
-            .property("max-size-time", 1000000)
-            .property("max-size-buffers", 30)
-            .property("leaky", "downstream")
-            .build();
+        const queue = try gst.Element.init("queue", queueName);
+        queue.set(.{
+            .max_size_time = 1000000,
+            .max_size_buffers = 30,
+            .leaky = "downstream",
+        });
 
         try queues.append(queue);
     }
@@ -49,19 +48,17 @@ fn run(init: std.process.Init) !void {
     const demuxer = try gst.Element.init("tsdemux", "demuxer");
     const parse = try gst.Element.init("h264parse", "parser");
 
-    const payloader = try gst.Element.factory("rtph264pay")
-        .name("payloader")
-        .property("config-interval", 1)
-        .build();
+    const payloader = try gst.Element.init("rtph264pay", "payloader");
+    payloader.set(.{ .config_interval = 1 });
 
-    const sink = try gst.Element.factory("udpsink")
-        .name("sink")
-        .property("host", "127.0.0.1")
-        .property("port", 5000)
-        .property("sync", false)
-        .property("async", false)
-        .property("max-lateness", -1)
-        .build();
+    const sink = try gst.Element.init("udpsink", "sink");
+    sink.set(.{
+        .host = "127.0.0.1",
+        .port = 5000,
+        .sync = false,
+        .async = false,
+        .max_lateness = -1,
+    });
 
     try pipeline.addMany(&.{ source, demuxer, parse, payloader, sink });
 

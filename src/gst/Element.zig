@@ -79,6 +79,25 @@ pub const Element = struct {
         };
     }
 
+    /// Sets multiple properties from a struct literal. Field names are passed
+    /// to GObject as-is; GObject treats `-` and `_` as equivalent in property
+    /// names, so `.is_live = true` targets the `is-live` property.
+    ///
+    /// Example:
+    /// ```zig
+    /// src.set(.{ .pattern = 18, .is_live = true, .num_buffers = 100 });
+    /// ```
+    ///
+    /// For runtime-determined property names or names that collide with Zig
+    /// keywords, use `setProperty` directly.
+    pub fn set(self: Element, props: anytype) void {
+        const info = @typeInfo(@TypeOf(props));
+        if (info != .@"struct") @compileError("Element.set expects a struct literal");
+        inline for (info.@"struct".fields) |field| {
+            self.setProperty(field.name.ptr, @field(props, field.name));
+        }
+    }
+
     pub fn setProperty(self: Element, property_name: [*:0]const u8, value: anytype) void {
         const ValueType = @TypeOf(value);
         switch (ValueType) {
@@ -135,10 +154,6 @@ pub const Element = struct {
 
     pub inline fn getName(self: Element) ?[*:0]const u8 {
         return c.gst_element_get_name(self.ptr);
-    }
-
-    pub fn factory(factory_name: [*:0]const u8) ElementFactory {
-        return ElementFactory.init(factory_name);
     }
 
     pub fn makeFromUri(uri_type: UriType, uri: [*:0]const u8, elementname: ?[*:0]const u8) !Element {
@@ -278,115 +293,4 @@ pub const UriType = enum(c_uint) {
     unknown = 0,
     sink = 1,
     src = 2,
-};
-
-const ElementFactory = struct {
-    factory_name: [*:0]const u8,
-    element_name: ?[*:0]const u8,
-    properties: std.array_list.Managed(Property),
-    allocator: std.mem.Allocator,
-
-    const Property = struct {
-        name: [*:0]const u8,
-        value: PropertyValue,
-    };
-
-    const PropertyValue = union(enum) {
-        string: [*:0]const u8,
-        int: c_int,
-        long: c_long,
-        uint: c_uint,
-        ulong: c_ulong,
-        float: f32,
-        double: f64,
-        boolean: bool,
-        enum_val: c_int,
-    };
-
-    fn init(factory_name: [*:0]const u8) ElementFactory {
-        return .{
-            .factory_name = factory_name,
-            .element_name = factory_name, // If no name was provided, just use factory_name
-            .properties = std.array_list.Managed(Property).init(std.heap.page_allocator),
-            .allocator = std.heap.page_allocator,
-        };
-    }
-
-    pub fn make(factory_name: [*:0]const u8) ElementFactory {
-        return ElementFactory.init(factory_name);
-    }
-
-    pub fn name(self: ElementFactory, element_name: [*:0]const u8) ElementFactory {
-        var result = self;
-        result.element_name = element_name;
-        return result;
-    }
-
-    pub fn property(self: ElementFactory, property_name: [*:0]const u8, value: anytype) ElementFactory {
-        var result = self;
-
-        const ValueType = @TypeOf(value);
-        const prop_value = switch (ValueType) {
-            []const u8, [*:0]const u8 => PropertyValue{ .string = @as([*:0]const u8, @ptrCast(value)) },
-            i32, c_int => PropertyValue{ .int = @as(c_int, value) },
-            i64, c_long => PropertyValue{ .long = @as(c_long, value) },
-            u32, c_uint => PropertyValue{ .uint = @as(c_uint, value) },
-            u64 => PropertyValue{ .ulong = @as(c_ulong, value) },
-            f32 => PropertyValue{ .float = @as(f32, value) },
-            f64 => PropertyValue{ .double = @as(f64, value) },
-            comptime_int => PropertyValue{ .int = @as(c_int, value) },
-            comptime_float => PropertyValue{ .double = @as(f64, value) },
-            bool => PropertyValue{ .boolean = value },
-            else => switch (@typeInfo(ValueType)) {
-                .@"enum" => PropertyValue{ .enum_val = @as(c_int, @intFromEnum(value)) },
-                .pointer => |ptr| blk: {
-                    if (ptr.child == u8 or (ptr.size == .one and @typeInfo(ptr.child) == .array and @typeInfo(ptr.child).array.child == u8)) {
-                        break :blk PropertyValue{ .string = @as([*:0]const u8, @ptrCast(value)) };
-                    } else {
-                        @compileError("Unsupported property type");
-                    }
-                },
-                else => @compileError("Unsupported property type"),
-            },
-        };
-
-        result.properties.append(.{
-            .name = property_name,
-            .value = prop_value,
-        }) catch @panic("Failed to add property");
-
-        return result;
-    }
-
-    pub fn build(self: ElementFactory) !Element {
-        const ptr = c.gst_element_factory_make(self.factory_name, self.element_name);
-        if (ptr == null) {
-            self.properties.deinit();
-            return error.ElementCreationFailed;
-        }
-
-        const element = Element{ .ptr = ptr };
-
-        // Apply all properties
-        for (self.properties.items) |prop| {
-            switch (prop.value) {
-                .string => |val| c.gst_util_set_object_arg(@ptrCast(element.ptr), prop.name, val),
-                .int => |val| c.g_object_set(@ptrCast(element.ptr), prop.name, val, @as(?*anyopaque, null)),
-                .long => |val| c.g_object_set(@ptrCast(element.ptr), prop.name, val, @as(?*anyopaque, null)),
-                .uint => |val| c.g_object_set(@ptrCast(element.ptr), prop.name, val, @as(?*anyopaque, null)),
-                .ulong => |val| c.g_object_set(@ptrCast(element.ptr), prop.name, val, @as(?*anyopaque, null)),
-                .float => |val| c.g_object_set(@ptrCast(element.ptr), prop.name, val, @as(?*anyopaque, null)),
-                .double => |val| c.g_object_set(@ptrCast(element.ptr), prop.name, val, @as(?*anyopaque, null)),
-                .boolean => |val| c.g_object_set(@ptrCast(element.ptr), prop.name, @as(c_int, if (val) 1 else 0), @as(?*anyopaque, null)),
-                .enum_val => |val| c.g_object_set(@ptrCast(element.ptr), prop.name, val, @as(?*anyopaque, null)),
-            }
-        }
-
-        self.properties.deinit();
-        return element;
-    }
-
-    pub fn deinit(self: ElementFactory) void {
-        self.properties.deinit();
-    }
 };
