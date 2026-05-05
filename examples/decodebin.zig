@@ -49,9 +49,8 @@ fn run(init: std.process.Init) !void {
     const pipeline = try gst.Pipeline.init("example-decodebin");
     defer pipeline.deinit();
 
-    const src = try gst.Element.factory("filesrc")
-        .property("location", args[1])
-        .build();
+    const src = try gst.Element.init("filesrc", null);
+    src.set(.{ .location = args[1] });
 
     const decodebin = try gst.Element.init("decodebin", "decodebin");
 
