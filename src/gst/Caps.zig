@@ -224,12 +224,7 @@ pub const Caps = struct {
                 switch (@typeInfo(T)) {
                     .optional => {
                         if (value) |v| {
-                            const VType = @TypeOf(v);
-                            if (@typeInfo(VType) == .int) {
-                                self.setField(name, @as(i32, @intCast(v)));
-                            } else {
-                                self.setField(name, v);
-                            }
+                            self.setField(name, v);
                         }
                     },
                     .pointer => |ptr_info| {
