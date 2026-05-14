@@ -24,7 +24,6 @@ pub const Bus = @import("gst/Bus.zig").Bus;
 pub const Message = @import("gst/Message.zig").Message;
 pub const Structure = @import("gst/Structure.zig").Structure;
 pub const Caps = caps.Caps;
-pub const CapsBuilder = caps.CapsBuilder;
 pub const Fraction = fraction.Fraction;
 const pad = @import("gst/Pad.zig");
 pub const Pad = pad.Pad;
