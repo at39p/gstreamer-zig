@@ -96,12 +96,12 @@ fn run() !void {
     appsrc.setStreamType(.stream);
     appsrc.setFormat(.time);
 
-    // const caps = gst.Caps.builder("video/x-raw")
-    //     .field("format", "RGB")
-    //     .field("width", 320)
-    //     .field("height", 240)
-    //     .field("framerate", gst.Fraction.new(30, 1))
-    //     .build();
+    // const caps = try gst.Caps.new("video/x-raw", .{
+    //     .format = "RGB",
+    //     .width = 320,
+    //     .height = 240,
+    //     .framerate = gst.Fraction.new(30, 1),
+    // });
     // defer caps.deinit();
 
     const caps = try videoInfo.toCaps();

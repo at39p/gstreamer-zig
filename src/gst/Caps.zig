@@ -9,7 +9,7 @@ pub const Structure = @import("Structure.zig").Structure;
 pub const Caps = struct {
     ptr: ?GstCaps,
 
-    pub fn new() !Caps {
+    pub fn newEmpty() !Caps {
         const ptr = c.gst_caps_new_empty();
         if (ptr == null) {
             return error.CapsCreationFailed;
@@ -31,6 +31,31 @@ pub const Caps = struct {
             return error.CapsCreationFailed;
         }
         return .{ .ptr = ptr };
+    }
+
+    /// Creates caps for `media_type` and populates the first structure from a
+    /// struct literal. Field names are passed to `gst_structure_set` as-is;
+    /// for names containing characters not valid in Zig identifiers (e.g.
+    /// `pixel-aspect-ratio`), use `@"pixel-aspect-ratio"` syntax, or fall
+    /// back to `newSimple` + `setField`.
+    ///
+    /// Example:
+    /// ```zig
+    /// const caps = try Caps.new("video/x-raw", .{
+    ///     .format = "RGB",
+    ///     .width = 320,
+    ///     .height = 240,
+    ///     .framerate = Fraction.new(30, 1),
+    /// });
+    /// ```
+    pub fn new(media_type: [*:0]const u8, fields: anytype) !Caps {
+        const info = @typeInfo(@TypeOf(fields));
+        if (info != .@"struct") @compileError("Caps.new expects a struct literal");
+        const caps = try Caps.newSimple(media_type);
+        inline for (info.@"struct".fields) |f| {
+            caps.setField(f.name.ptr, @field(fields, f.name));
+        }
+        return caps;
     }
 
     pub fn fromString(str: [*:0]const u8) !Caps {
@@ -156,22 +181,8 @@ pub const Caps = struct {
         return Structure{ .ptr = structure_ptr, .owned = false };
     }
 
-    pub fn builder(media_type: [*:0]const u8) CapsBuilder {
-        return CapsBuilder.init(media_type) catch unreachable;
-    }
-};
-
-pub const CapsBuilder = struct {
-    caps: Caps,
-
-    pub fn init(media_type: [*:0]const u8) !CapsBuilder {
-        const caps = try Caps.newSimple(media_type);
-        return .{ .caps = caps };
-    }
-
-    pub fn field(self: CapsBuilder, name: [*:0]const u8, value: anytype) CapsBuilder {
-        // Get the first (and only) structure from the caps
-        const ptr = self.caps.ptr orelse @panic("CapsBuilder.field() called on consumed CapsBuilder - this should not happen");
+    pub fn setField(self: Caps, name: [*:0]const u8, value: anytype) void {
+        const ptr = self.ptr orelse @panic("Caps.setField() called on consumed Caps - cannot set field on caps that were already passed to a function taking ownership");
         const structure = c.gst_caps_get_structure(ptr, 0);
 
         const T = @TypeOf(value);
@@ -210,41 +221,22 @@ pub const CapsBuilder = struct {
                 c.gst_structure_set(structure, name, c.gst_fraction_get_type(), value.numerator, value.denominator, @as(?*anyopaque, null));
             },
             else => {
-                // Check if it's an optional type
-                if (@typeInfo(T) == .optional) {
-                    if (value) |v| {
-                        // Convert the unwrapped value to a consistent type for GStreamer
-                        const VType = @TypeOf(v);
-                        if (@typeInfo(VType) == .int) {
-                            // Convert all integers to i32 for consistency
-                            return self.field(name, @as(i32, @intCast(v)));
-                        } else {
-                            return self.field(name, v);
+                switch (@typeInfo(T)) {
+                    .optional => {
+                        if (value) |v| {
+                            self.setField(name, v);
                         }
-                    } else {
-                        // Skip setting field if value is null
-                        return self;
-                    }
-                }
-
-                // Check if it's a comptime string
-                if (@typeInfo(T) == .pointer) {
-                    const ptr_info = @typeInfo(T).pointer;
-                    if (ptr_info.size == .one and @typeInfo(ptr_info.child) == .array) {
-                        const array_info = @typeInfo(ptr_info.child).array;
-                        if (array_info.child == u8) {
+                    },
+                    .pointer => |ptr_info| {
+                        if (ptr_info.size == .one and @typeInfo(ptr_info.child) == .array and @typeInfo(ptr_info.child).array.child == u8) {
                             c.gst_structure_set(structure, name, c.G_TYPE_STRING, @as([*:0]const u8, value), @as(?*anyopaque, null));
-                            return self;
+                        } else {
+                            @compileError("Unsupported field type: " ++ @typeName(T));
                         }
-                    }
+                    },
+                    else => @compileError("Unsupported field type: " ++ @typeName(T)),
                 }
-                @compileError("Unsupported field type: " ++ @typeName(T));
             },
         }
-        return self;
-    }
-
-    pub fn build(self: CapsBuilder) Caps {
-        return self.caps;
     }
 };
