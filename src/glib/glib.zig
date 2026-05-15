@@ -3,7 +3,8 @@ pub const DateTime = @import("DateTime.zig").DateTime;
 
 const GMainLoop = *c.GMainLoop;
 
-pub fn timeoutAddSeconds(
+fn addTimeout(
+    comptime c_fn: anytype,
     interval: u32,
     context: anytype,
     comptime callback: fn (@TypeOf(context)) bool,
@@ -24,7 +25,29 @@ pub fn timeoutAddSeconds(
     };
 
     const user_data: ?*anyopaque = if (Context == void) null else @ptrCast(@constCast(context));
-    return c.g_timeout_add_seconds(interval, Wrapper.cCallback, user_data);
+    return c_fn(interval, Wrapper.cCallback, user_data);
+}
+
+pub fn timeoutAddSeconds(
+    interval: u32,
+    context: anytype,
+    comptime callback: fn (@TypeOf(context)) bool,
+) u32 {
+    return addTimeout(c.g_timeout_add_seconds, interval, context, callback);
+}
+
+/// `interval` is in milliseconds. For second-resolution timers, prefer
+/// `timeoutAddSeconds`, which lets GLib coalesce wake-ups.
+pub fn timeoutAdd(
+    interval: u32,
+    context: anytype,
+    comptime callback: fn (@TypeOf(context)) bool,
+) u32 {
+    return addTimeout(c.g_timeout_add, interval, context, callback);
+}
+
+pub fn sourceRemove(source_id: u32) bool {
+    return c.g_source_remove(source_id) != 0;
 }
 
 // GLib MainLoop wrapper

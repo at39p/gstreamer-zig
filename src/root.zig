@@ -65,6 +65,7 @@ pub const DiscovererStreamInfo = pbutils.DiscovererStreamInfo;
 pub const ClockTime = clock.ClockTime;
 pub const State = core.State;
 pub const StateChangeReturn = core.StateChangeReturn;
+pub const Format = @import("gst/Format.zig").Format;
 pub const GetStateResult = Element.GetStateResult;
 
 pub const GStreamerError = errors.GStreamerError;

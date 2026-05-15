@@ -9,6 +9,7 @@ pub const GstElement = core.GstElement;
 pub const GstPipeline = core.GstPipeline;
 pub const State = core.State;
 pub const StateChangeReturn = core.StateChangeReturn;
+pub const Format = @import("Format.zig").Format;
 pub const Caps = caps.Caps;
 pub const Pad = pad.Pad;
 
@@ -77,6 +78,22 @@ pub const Element = struct {
             .pending = @enumFromInt(pending),
             .return_val = @enumFromInt(result),
         };
+    }
+
+    pub fn queryPosition(self: Element, format: Format) ?i64 {
+        var value: i64 = undefined;
+        if (c.gst_element_query_position(self.ptr, @intFromEnum(format), &value) == 0) {
+            return null;
+        }
+        return value;
+    }
+
+    pub fn queryDuration(self: Element, format: Format) ?i64 {
+        var value: i64 = undefined;
+        if (c.gst_element_query_duration(self.ptr, @intFromEnum(format), &value) == 0) {
+            return null;
+        }
+        return value;
     }
 
     /// Sets multiple properties from a struct literal. Field names are passed
