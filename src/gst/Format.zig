@@ -1,6 +1,6 @@
 const c = @import("../c.zig").c;
 
-pub const Format = enum(c_uint) {
+pub const Format = enum(c.GstFormat) {
     undefined = c.GST_FORMAT_UNDEFINED,
     default = c.GST_FORMAT_DEFAULT,
     bytes = c.GST_FORMAT_BYTES,
