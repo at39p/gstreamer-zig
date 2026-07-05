@@ -56,7 +56,7 @@ For other platforms, see the [official GStreamer installation guide](https://gst
 ```zig
 .dependencies = .{
     .gstreamer_zig = .{
-        .url = "https://github.com/at39p/gstreamer-zig/archive/main.tar.gz",
+        .url = "https://codeberg.org/at39p/gstreamer-zig/archive/main.tar.gz",
         // Run `zig build` once -- the compiler will tell you the correct hash
     },
 },
@@ -175,7 +175,7 @@ const raw_element = gst.c.gst_element_factory_make("customsrc", "my-source");
 ## Building from source
 
 ```sh
-git clone https://github.com/at39p/gstreamer-zig.git
+git clone https://codeberg.org/at39p/gstreamer-zig.git
 cd gstreamer-zig
 zig build
 ```
