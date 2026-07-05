@@ -4,7 +4,7 @@
 
 **Idiomatic Zig bindings for the [GStreamer](https://gstreamer.freedesktop.org/) multimedia framework**
 
-[![Zig](https://img.shields.io/badge/Zig-0.15.1+-F7A41D?logo=zig&logoColor=white)](https://ziglang.org)
+[![Zig](https://img.shields.io/badge/Zig-0.16.0+-F7A41D?logo=zig&logoColor=white)](https://ziglang.org)
 [![GStreamer](https://img.shields.io/badge/GStreamer-1.x-00CC00?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+)](https://gstreamer.freedesktop.org/)
 [![Status](https://img.shields.io/badge/status-under_development-orange)](#status)
 
