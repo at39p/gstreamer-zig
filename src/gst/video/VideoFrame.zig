@@ -1,0 +1,181 @@
+pub const video = @import("video.zig");
+pub const VideoInfo = @import("VideoInfo.zig").VideoInfo;
+pub const Buffer = @import("../Buffer.zig").Buffer;
+pub const core = @import("../core.zig");
+
+const c = video.c_video;
+const std = @import("std");
+
+pub const VideoFrame = struct {
+    ptr: c.GstVideoFrame,
+
+    pub fn fromBufferReadable(buffer_ref: Buffer, info: VideoInfo) !VideoFrame {
+        var frame: c.GstVideoFrame = undefined;
+        const success = c.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c.GST_MAP_READ);
+        if (success == 0) {
+            return error.VideoFrameMapFailed;
+        }
+        return .{ .ptr = frame };
+    }
+
+    pub fn fromBufferWritable(buffer_ref: Buffer, info: VideoInfo) !VideoFrame {
+        var frame: c.GstVideoFrame = undefined;
+        const success = c.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c.GST_MAP_WRITE);
+        if (success == 0) {
+            return error.VideoFrameMapFailed;
+        }
+        return .{ .ptr = frame };
+    }
+
+    pub fn fromBufferReadWrite(buffer_ref: Buffer, info: VideoInfo) !VideoFrame {
+        var frame: c.GstVideoFrame = undefined;
+        const success = c.gst_video_frame_map(&frame, info.ptr, @ptrCast(buffer_ref.ptr), c.GST_MAP_READWRITE);
+        if (success == 0) {
+            return error.VideoFrameMapFailed;
+        }
+        return .{ .ptr = frame };
+    }
+
+    pub fn deinit(self: *VideoFrame) void {
+        c.gst_video_frame_unmap(&self.ptr);
+    }
+
+    pub fn copy(self: *const VideoFrame, dest: *VideoFrame) !void {
+        const success = c.gst_video_frame_copy(&dest.ptr, &self.ptr);
+        if (success == 0) {
+            return error.VideoFrameCopyFailed;
+        }
+    }
+
+    pub fn copyPlane(self: *const VideoFrame, dest: *VideoFrame, plane: u32) !void {
+        const success = c.gst_video_frame_copy_plane(&dest.ptr, &self.ptr, plane);
+        if (success == 0) {
+            return error.VideoFrameCopyPlaneFailed;
+        }
+    }
+
+    pub fn getWidth(self: *const VideoFrame) u32 {
+        return @intCast(self.ptr.info.width);
+    }
+
+    pub fn getHeight(self: *const VideoFrame) u32 {
+        return @intCast(self.ptr.info.height);
+    }
+
+    pub fn getFormat(self: *const VideoFrame) c.GstVideoFormat {
+        return self.ptr.info.finfo.*.format;
+    }
+
+    pub fn getFlags(self: *const VideoFrame) VideoFrameFlags {
+        return VideoFrameFlags.fromInt(self.ptr.flags);
+    }
+
+    pub fn getNPlanes(self: *const VideoFrame) u32 {
+        return @intCast(self.ptr.info.finfo.*.n_planes);
+    }
+
+    pub fn getNComponents(self: *const VideoFrame) u32 {
+        return @intCast(self.ptr.info.finfo.*.n_components);
+    }
+
+    pub fn planeStride(self: *const VideoFrame, plane: u32) !i32 {
+        const n_planes = self.getNPlanes();
+        if (plane >= n_planes) {
+            return error.InvalidPlaneIndex;
+        }
+        return self.ptr.info.stride[plane];
+    }
+
+    pub fn planeOffset(self: *const VideoFrame, plane: u32) !usize {
+        const n_planes = self.getNPlanes();
+        if (plane >= n_planes) {
+            return error.InvalidPlaneIndex;
+        }
+        return self.ptr.info.offset[plane];
+    }
+
+    /// Number of rows in the given plane, accounting for vertical chroma
+    /// subsampling (e.g. half height for the U/V planes of I420).
+    pub fn planeHeight(self: *const VideoFrame, plane: u32) u32 {
+        const finfo = self.ptr.info.finfo.*;
+        const height = self.getHeight();
+        // Find the first component stored in this plane and apply its
+        // subsampling shift, like GST_VIDEO_FRAME_COMP_HEIGHT does.
+        var comp: u32 = 0;
+        while (comp < self.getNComponents()) : (comp += 1) {
+            if (finfo.plane[comp] == plane) {
+                const shift: u5 = @intCast(finfo.h_sub[comp]);
+                return (height + (@as(u32, 1) << shift) - 1) >> shift;
+            }
+        }
+        return height;
+    }
+
+    pub fn planeData(self: *VideoFrame, plane: u32) ![]u8 {
+        const n_planes = self.getNPlanes();
+        if (plane >= n_planes) {
+            return error.InvalidPlaneIndex;
+        }
+
+        const data_ptr = self.ptr.data[plane];
+        if (data_ptr == null) {
+            return error.InvalidPlaneData;
+        }
+
+        const stride = try self.planeStride(plane);
+        const size = @as(usize, @intCast(stride)) * self.planeHeight(plane);
+
+        return @as([*]u8, @ptrCast(data_ptr))[0..size];
+    }
+
+    pub fn componentData(self: *VideoFrame, comp: u32) ![]u8 {
+        const n_components = self.getNComponents();
+        if (comp >= n_components) {
+            return error.InvalidComponentIndex;
+        }
+
+        // GstVideoFormatInfo describes components via parallel arrays:
+        // plane[comp] is the plane index, poffset[comp] the byte offset of
+        // the component's first pixel within that plane.
+        const finfo = self.ptr.info.finfo.*;
+        const plane = finfo.plane[comp];
+        const plane_data = try self.planeData(plane);
+
+        const offset: usize = finfo.poffset[comp];
+        if (offset >= plane_data.len) {
+            return error.InvalidComponentOffset;
+        }
+
+        return plane_data[offset..];
+    }
+
+    /// Returns a view into this frame's embedded info. It is only valid
+    /// while the frame is mapped; do NOT call VideoInfo.deinit() on it.
+    pub fn getInfo(self: *const VideoFrame) VideoInfo {
+        return VideoInfo{ .ptr = @constCast(&self.ptr.info) };
+    }
+
+    /// Returns the mapped buffer as a borrowed reference — do not call
+    /// Buffer.deinit() on it.
+    pub fn getBuffer(self: *const VideoFrame) Buffer {
+        return Buffer{ .ptr = self.ptr.buffer };
+    }
+};
+
+pub const VideoFrameFlags = packed struct(u32) {
+    interlaced: bool = false,
+    tff: bool = false,
+    rff: bool = false,
+    onefield: bool = false,
+    multiple_view: bool = false,
+    first_in_bundle: bool = false,
+    _: u26 = 0, // Unused padding
+
+    pub fn fromInt(value: u32) VideoFrameFlags {
+        return @bitCast(value);
+    }
+
+    pub fn toInt(self: VideoFrameFlags) u32 {
+        return @bitCast(self);
+    }
+};
