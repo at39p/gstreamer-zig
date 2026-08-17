@@ -248,3 +248,7 @@ pub const Bus = struct {
 
 // Sync handler function type
 pub const BusSyncHandler = *const fn (bus: [*c]c.GstBus, msg: [*c]c.GstMessage, user_data: ?*anyopaque) callconv(.c) c.GstBusSyncReply;
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

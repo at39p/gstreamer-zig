@@ -180,3 +180,7 @@ pub const Event = struct {
         return .{ .ptr = copied_ptr };
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

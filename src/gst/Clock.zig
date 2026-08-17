@@ -72,3 +72,7 @@ pub const ClockTime = packed struct(u64) {
 };
 
 pub const TIME_NONE: ClockTime = .{ .nanoseconds = c.GST_CLOCK_TIME_NONE };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

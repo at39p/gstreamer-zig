@@ -179,3 +179,7 @@ pub const VideoFrameFlags = packed struct(u32) {
         return @bitCast(self);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

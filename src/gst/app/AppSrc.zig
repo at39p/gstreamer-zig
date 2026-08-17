@@ -199,3 +199,7 @@ fn convertUserData(comptime T: type, data: c.gpointer) T {
         else => @compileError("userdata type must be a pointer or null"),
     };
 }
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

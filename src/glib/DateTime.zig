@@ -81,3 +81,7 @@ pub const DateTime = struct {
         }
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

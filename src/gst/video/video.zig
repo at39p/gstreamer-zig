@@ -13,3 +13,7 @@ pub const VideoTimeCode = videotimecode.VideoTimeCode;
 pub const VideoTimeCodeInterval = videotimecode.VideoTimeCodeInterval;
 pub const VideoTimeCodeFlags = videotimecode.VideoTimeCodeFlags;
 pub const VideoTimeCodeMeta = videotimecode.VideoTimeCodeMeta;
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

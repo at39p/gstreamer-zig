@@ -172,6 +172,20 @@ pub fn version() Version {
     };
 }
 
-pub fn versionString() [*:0]const u8 {
-    return c.gst_version_string();
+/// Returns a Zig-allocated copy of the version string. Caller must free with
+/// allocator.free().
+///
+/// `gst_version_string` is transfer full and GStreamer offers no borrowed
+/// equivalent, so allocating is the only way to hand this back safely. For a
+/// structured, allocation-free alternative see `version()`, whose `Version`
+/// prints with `{f}`.
+pub fn versionStringAlloc(allocator: std.mem.Allocator) ![]u8 {
+    const str = c.gst_version_string();
+    if (str == null) return error.VersionStringFailed;
+    defer c.g_free(str);
+    return try allocator.dupe(u8, std.mem.span(str));
+}
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
 }

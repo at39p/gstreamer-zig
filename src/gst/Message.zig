@@ -109,3 +109,7 @@ pub const Message = struct {
         }
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

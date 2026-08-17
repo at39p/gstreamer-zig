@@ -8,3 +8,7 @@ pub const Format = enum(c.GstFormat) {
     buffers = c.GST_FORMAT_BUFFERS,
     percent = c.GST_FORMAT_PERCENT,
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

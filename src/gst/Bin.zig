@@ -100,8 +100,14 @@ pub const Bin = struct {
         return c.gst_bin_get_suppressed_flags(self.ptr);
     }
 
-    pub fn getName(self: Bin) ?[*:0]const u8 {
-        return c.gst_element_get_name(@as(*c.GstElement, @ptrCast(self.ptr)));
+    /// Borrowed name; see `Element.getName` for the thread-safety caveat.
+    pub fn getName(self: Bin) ?[:0]const u8 {
+        return self.asElement().getName();
+    }
+
+    /// Owned copy of the bin's name. Caller frees with `allocator.free()`.
+    pub fn getNameAlloc(self: Bin, allocator: std.mem.Allocator) !?[]u8 {
+        return self.asElement().getNameAlloc(allocator);
     }
 
     pub fn findUnlinkedPad(self: Bin, direction: c.GstPadDirection) ?*c.GstPad {
@@ -144,3 +150,7 @@ pub const Bin = struct {
         return Bin{ .ptr = @ptrCast(element_ptr) };
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

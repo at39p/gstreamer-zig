@@ -85,3 +85,7 @@ pub const TagList = struct {
         return try allocator.dupe(u8, std.mem.span(str));
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

@@ -60,3 +60,7 @@ pub const StreamType = enum(c_uint) {
         return (@intFromEnum(self) & @intFromEnum(other)) == @intFromEnum(other);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

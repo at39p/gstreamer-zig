@@ -73,7 +73,7 @@ fn run(init: std.process.Init) !void {
     try queues.items[0].link(demuxer);
 
     // Link elements after demuxer (will be connected via pad-added callback)
-    try queues.items[1].linkMany(&.{ parse, queues.items[2], payloader, queues.items[3], sink });
+    try gst.Element.linkMany(&.{ queues.items[1], parse, queues.items[2], payloader, queues.items[3], sink });
 
     try pipeline.start();
 

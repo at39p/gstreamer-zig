@@ -87,7 +87,7 @@ pub const init = core.init;
 pub const init_check = core.init_check;
 pub const deinit = core.deinit;
 pub const version = core.version;
-pub const versionString = core.versionString;
+pub const versionStringAlloc = core.versionStringAlloc;
 
 // Element functions
 pub const getState = Element.getState;
@@ -104,3 +104,7 @@ pub const objectUnref = core.objectUnref;
 
 pub const macosMain = core.macosMain;
 pub const macosMainSimple = core.macosMainSimple;
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

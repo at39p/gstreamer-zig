@@ -96,3 +96,7 @@ pub const Sample = struct {
         return c.gst_sample_get_info(ptr);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

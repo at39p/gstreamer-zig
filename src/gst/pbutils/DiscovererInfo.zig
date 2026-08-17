@@ -79,3 +79,7 @@ pub const DiscovererInfo = struct {
         return .{ .ptr = c.gst_discoverer_info_get_audio_streams(self.ptr) };
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

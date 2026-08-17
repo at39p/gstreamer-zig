@@ -105,3 +105,7 @@ pub const VideoFormat = enum(c_video.GstVideoFormat) {
         return videoformatinfo.VideoFormatInfo{ .ptr = @constCast(ptr) };
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

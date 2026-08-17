@@ -101,3 +101,7 @@ pub const MainLoop = struct {
         c.g_main_loop_quit(self.ptr);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

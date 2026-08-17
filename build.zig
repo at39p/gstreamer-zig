@@ -29,12 +29,22 @@ pub fn build(b: *std.Build) void {
 
     const c_module = translate_c.createModule();
 
+    // Imported as "testing" by every source file's trailing test block, so the
+    // reference is spelled the same regardless of how deep the file sits.
+    const testing_module = b.createModule(.{
+        .root_source_file = b.path("src/testing.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{.{ .name = "c", .module = c_module }},
+    });
+
     const gstreamer_module = b.addModule("gstreamer", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
             .{ .name = "c", .module = c_module },
+            .{ .name = "testing", .module = testing_module },
         },
     });
 
@@ -55,6 +65,13 @@ pub fn build(b: *std.Build) void {
         .root_module = gstreamer_module,
     });
     check.dependOn(&lib_check.step);
+
+    // refAllDeclsRecursive in each source file makes this analyze the whole
+    // public API, including bindings with no call site.
+    const lib_tests = b.addTest(.{ .root_module = gstreamer_module });
+    const test_step = b.step("test", "Run library tests");
+    test_step.dependOn(&b.addRunArtifact(lib_tests).step);
+    check.dependOn(&lib_tests.step);
 
     const examples = [_]struct { name: []const u8, file: []const u8, description: []const u8, skip_install: bool = false }{
         .{ .name = "launch", .file = "launch.zig", .description = "Run the launch example" },

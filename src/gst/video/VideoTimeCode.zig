@@ -387,3 +387,7 @@ pub const VideoTimeCodeMeta = struct {
         return .{ .ptr = ptr };
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

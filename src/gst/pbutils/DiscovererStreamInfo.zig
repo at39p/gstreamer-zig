@@ -45,3 +45,7 @@ pub const DiscovererStreamInfoList = struct {
         return .{ .current = self.ptr };
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

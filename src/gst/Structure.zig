@@ -225,9 +225,18 @@ pub const Structure = struct {
     }
 
     // Utility functions
-    pub fn toString(self: Structure) [*:0]u8 {
-        const ptr = self.ptr orelse @panic("Structure.toString() called on consumed Structure - cannot use structure after ownership was transferred");
-        return c.gst_structure_to_string(ptr);
+    /// Returns a Zig-allocated copy of the structure string. Caller must free
+    /// with allocator.free().
+    ///
+    /// `gst_structure_to_string` is transfer full and GStreamer offers no
+    /// borrowed equivalent, so allocating is the only way to hand this back
+    /// safely.
+    pub fn toStringAlloc(self: Structure, allocator: std.mem.Allocator) ![]u8 {
+        const ptr = self.ptr orelse @panic("Structure.toStringAlloc() called on consumed Structure - cannot use structure after ownership was transferred");
+        const str = c.gst_structure_to_string(ptr);
+        if (str == null) return error.StructureStringFailed;
+        defer c.g_free(str);
+        return try allocator.dupe(u8, std.mem.span(str));
     }
 
     pub fn nFields(self: Structure) u32 {
@@ -266,3 +275,7 @@ pub const Structure = struct {
         return null;
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

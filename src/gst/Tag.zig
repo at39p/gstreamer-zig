@@ -67,3 +67,7 @@ pub const Tag = struct {
     // DateTime tags
     pub const date_time: Tag = .{ .name = "datetime", .ValueType = DateTime };
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

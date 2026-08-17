@@ -27,3 +27,7 @@ pub const Fraction = struct {
         return self.numerator == other.numerator and self.denominator == other.denominator;
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

@@ -79,3 +79,7 @@ pub const VideoFormatInfo = struct {
         return (self.ptr.*.flags & c_video.GST_VIDEO_FORMAT_FLAG_GRAY) != 0;
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

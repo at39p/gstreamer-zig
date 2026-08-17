@@ -75,7 +75,9 @@ fn onNeedData(appsrc: *gst.AppSrc, length: u32, context: *contextData) void {
     frame_count += 1;
 }
 
-fn run() !void {
+fn run(init: std.process.Init) !void {
+    const allocator = init.gpa;
+
     gst.init(null);
     defer gst.deinit();
 
@@ -105,7 +107,9 @@ fn run() !void {
     // defer caps.deinit();
 
     const caps = try videoInfo.toCaps();
-    std.debug.print("caps: {s}\n", .{caps.toString()});
+    const caps_str = try caps.toStringAlloc(allocator);
+    defer allocator.free(caps_str);
+    std.debug.print("caps: {s}\n", .{caps_str});
 
     appsrc.setCaps(caps);
 
@@ -154,6 +158,6 @@ fn run() !void {
     _ = pipeline.setState(.null_state);
 }
 
-pub fn main() !void {
-    try gst.macosMainSimple(run, null);
+pub fn main(init: std.process.Init) !void {
+    try gst.macosMainSimple(run, init);
 }

@@ -168,8 +168,26 @@ pub const Element = struct {
         }
     }
 
-    pub inline fn getName(self: Element) ?[*:0]const u8 {
-        return c.gst_element_get_name(self.ptr);
+    /// Borrowed name, as `GST_OBJECT_NAME`. No allocation, valid while the
+    /// element is alive.
+    ///
+    /// Not thread-safe: this reads the name without taking the object lock, so
+    /// it is only sound while you know nothing is renaming the element. If in
+    /// doubt use `getNameAlloc`, which is what upstream advises.
+    pub inline fn getName(self: Element) ?[:0]const u8 {
+        const obj: *c.GstObject = @ptrCast(self.ptr);
+        if (obj.name == null) return null;
+        return std.mem.span(obj.name);
+    }
+
+    /// Owned copy of the element's name, as `gst_object_get_name`: takes the
+    /// object lock, so this is safe against concurrent renames. Caller frees
+    /// with `allocator.free()`.
+    pub fn getNameAlloc(self: Element, allocator: std.mem.Allocator) !?[]u8 {
+        const name = c.gst_element_get_name(self.ptr);
+        if (name == null) return null;
+        defer c.g_free(name);
+        return try allocator.dupe(u8, std.mem.span(name));
     }
 
     pub fn makeFromUri(uri_type: UriType, uri: [*:0]const u8, elementname: ?[*:0]const u8) !Element {
@@ -310,3 +328,7 @@ pub const UriType = enum(c_uint) {
     sink = 1,
     src = 2,
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

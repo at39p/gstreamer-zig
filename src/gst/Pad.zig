@@ -248,10 +248,26 @@ pub const Pad = struct {
         c.gst_pad_set_offset(self.ptr, offset);
     }
 
-    pub fn getName(self: Pad) ?[]const u8 {
+    /// Borrowed name, as `GST_OBJECT_NAME`. No allocation, valid while the pad
+    /// is alive.
+    ///
+    /// Not thread-safe: this reads the name without taking the object lock, so
+    /// it is only sound while you know nothing is renaming the pad. If in doubt
+    /// use `getNameAlloc`, which is what upstream advises.
+    pub fn getName(self: Pad) ?[:0]const u8 {
+        const obj: *c.GstObject = @ptrCast(self.ptr);
+        if (obj.name == null) return null;
+        return std.mem.span(obj.name);
+    }
+
+    /// Owned copy of the pad's name, as `gst_object_get_name`: takes the object
+    /// lock, so this is safe against concurrent renames. Caller frees with
+    /// `allocator.free()`.
+    pub fn getNameAlloc(self: Pad, allocator: std.mem.Allocator) !?[]u8 {
         const name = c.gst_pad_get_name(self.ptr);
         if (name == null) return null;
-        return std.mem.span(name);
+        defer c.g_free(name);
+        return try allocator.dupe(u8, std.mem.span(name));
     }
 
     pub fn addProbe(self: Pad, mask: PadProbeType, comptime callback_fn: anytype, user_data: anytype) u64 {
@@ -305,3 +321,7 @@ pub const Pad = struct {
         c.gst_pad_remove_probe(self.ptr, @intCast(id));
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

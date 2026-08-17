@@ -56,3 +56,7 @@ pub const PadTemplate = struct {
         c.gst_pad_template_pad_created(self.ptr, pad.ptr);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

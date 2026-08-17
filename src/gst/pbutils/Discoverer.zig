@@ -57,3 +57,7 @@ pub const Discoverer = struct {
         c.gst_discoverer_stop(self.ptr);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

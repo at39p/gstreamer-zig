@@ -8,3 +8,7 @@ pub const GStreamerError = error{
     InvalidCapsString,
     GstMacOsMainFailed,
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

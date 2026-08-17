@@ -87,3 +87,7 @@ pub const Buffer = struct {
         return self.map(c.GST_MAP_READ);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

@@ -141,3 +141,7 @@ pub const VideoInfo = struct {
         return @intCast(self.ptr.*.views);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

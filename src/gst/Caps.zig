@@ -83,12 +83,10 @@ pub const Caps = struct {
         return .{ .ptr = copied_ptr };
     }
 
-    pub fn toString(self: Caps) [*:0]const u8 {
-        const ptr = self.ptr orelse @panic("Caps.toString() called on consumed Caps - cannot convert to string caps that were already passed to a function taking ownership");
-        return c.gst_caps_to_string(ptr);
-    }
-
     /// Returns a Zig-allocated copy of the caps string. Caller must free with allocator.free().
+    ///
+    /// `gst_caps_to_string` is transfer full and GStreamer offers no borrowed
+    /// equivalent, so allocating is the only way to hand this back safely.
     pub fn toStringAlloc(self: Caps, allocator: std.mem.Allocator) ![]const u8 {
         const ptr = self.ptr orelse @panic("Caps.toStringAlloc() called on consumed Caps - cannot convert to string caps that were already passed to a function taking ownership");
         const glib_str = c.gst_caps_to_string(ptr);
@@ -244,3 +242,7 @@ pub const Caps = struct {
         }
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

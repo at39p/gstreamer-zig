@@ -109,8 +109,14 @@ pub const Pipeline = struct {
         self.element.setProperty(property_name, value);
     }
 
-    pub fn getName(self: Pipeline) ?[*:0]const u8 {
+    /// Borrowed name; see `Element.getName` for the thread-safety caveat.
+    pub fn getName(self: Pipeline) ?[:0]const u8 {
         return self.element.getName();
+    }
+
+    /// Owned copy of the pipeline's name. Caller frees with `allocator.free()`.
+    pub fn getNameAlloc(self: Pipeline, allocator: std.mem.Allocator) !?[]u8 {
+        return self.element.getNameAlloc(allocator);
     }
 
     pub fn start(self: Pipeline) !void {
@@ -134,3 +140,7 @@ pub const Pipeline = struct {
         return self.element.sendEvent(event);
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}

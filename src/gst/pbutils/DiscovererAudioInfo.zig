@@ -55,3 +55,7 @@ pub const DiscovererAudioInfoList = struct {
         return .{ .current = self.ptr };
     }
 };
+
+test {
+    @import("testing").refAllDeclsRecursive(@This());
+}
