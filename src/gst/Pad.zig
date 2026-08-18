@@ -104,6 +104,14 @@ pub const PadProbeInfo = struct {
         return Event{ .ptr = @ptrCast(@alignCast(data)) };
     }
 
+    /// Takes the event out of the probe, transferring ownership to the caller.
+    /// Use before returning `.drop` when forwarding a modified event yourself.
+    pub fn takeEvent(self: PadProbeInfo) ?Event {
+        const taken = self.getEvent() orelse return null;
+        self.ptr.*.data = null; // Ownership moves to the caller
+        return taken;
+    }
+
     pub fn getOffset(self: PadProbeInfo) u64 {
         return self.ptr.*.offset;
     }
@@ -246,6 +254,18 @@ pub const Pad = struct {
 
     pub fn setOffset(self: Pad, offset: i64) void {
         c.gst_pad_set_offset(self.ptr, offset);
+    }
+
+    // Event functions
+
+    /// Sends an event to the pad, consuming it - on failure too. The error
+    /// means the event was not handled, which is not always fatal.
+    pub fn pushEvent(self: Pad, ev: *Event) !void {
+        const event_ptr = ev.ptr orelse return error.PushEventFailed;
+        ev.ptr = null; // Consume the event by nulling the pointer
+        if (c.gst_pad_push_event(self.ptr, event_ptr) == 0) {
+            return error.PushEventFailed;
+        }
     }
 
     /// Borrowed name, as `GST_OBJECT_NAME`. No allocation, valid while the pad
