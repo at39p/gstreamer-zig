@@ -83,6 +83,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "events", .file = "events.zig", .description = "Run the events example" },
         .{ .name = "decodebin", .file = "decodebin.zig", .description = "Run the decodebin example" },
         .{ .name = "discoverer", .file = "discoverer.zig", .description = "Run the discoverer example" },
+        .{ .name = "pad-probes", .file = "pad-probes.zig", .description = "Run the pad probes example" },
     };
 
     for (examples) |example| {
