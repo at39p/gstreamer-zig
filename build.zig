@@ -84,6 +84,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "decodebin", .file = "decodebin.zig", .description = "Run the decodebin example" },
         .{ .name = "discoverer", .file = "discoverer.zig", .description = "Run the discoverer example" },
         .{ .name = "pad-probes", .file = "pad-probes.zig", .description = "Run the pad probes example" },
+        .{ .name = "async-bus", .file = "async-bus.zig", .description = "Run the async bus example" },
     };
 
     for (examples) |example| {
@@ -116,6 +117,7 @@ pub fn build(b: *std.Build) void {
         }
 
         const example_run_cmd = b.addRunArtifact(example_exe);
+        if (b.args) |args| example_run_cmd.addArgs(args);
         if (!example.skip_install) {
             example_run_cmd.step.dependOn(b.getInstallStep());
         }

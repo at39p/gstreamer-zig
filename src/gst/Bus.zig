@@ -7,6 +7,7 @@ const c = core.c;
 const GstBus = core.GstBus;
 const GstMessage = core.GstMessage;
 const ClockTime = clock.ClockTime;
+const Io = std.Io;
 
 pub const Bus = struct {
     ptr: GstBus,
@@ -244,6 +245,41 @@ pub const Bus = struct {
     pub fn disableSyncMessageEmission(self: Bus) void {
         c.gst_bus_disable_sync_message_emission(self.ptr);
     }
+
+    /// The bus as an async sequence of messages, for applications that run on
+    /// `std.Io` instead of a GLib main loop.
+    pub fn stream(self: Bus) Stream {
+        return .{ .bus = self };
+    }
+
+    pub const Stream = struct {
+        bus: Bus,
+
+        /// Awaits the next message, suspending the calling task while
+        /// GStreamer has nothing to say, so other tasks keep running. Returns
+        /// null once the bus stops delivering, e.g. it was set flushing.
+        ///
+        /// Transfer full: the caller owns the message and must `deinit` it.
+        ///
+        /// The bus itself is the queue, so no message is missed between calls.
+        /// One unit of concurrency is used per message, which is cheap for a
+        /// bus: it carries state changes, warnings and errors, not data.
+        ///
+        /// A pop already in flight cannot be interrupted - `gst_bus_timed_pop`
+        /// is a blocking call and Zig cannot cancel one - so a canceled task
+        /// observes the cancelation after the next message arrives.
+        pub fn next(self: Stream, io: Io) Io.ConcurrentError!?message.Message {
+            // `concurrent`, not `async`: `async` is allowed to run the pop
+            // inline on this thread, which would block it instead of
+            // suspending this task.
+            var pending = try io.concurrent(timedPopBlocking, .{self.bus});
+            return pending.await(io);
+        }
+
+        fn timedPopBlocking(bus: Bus) ?message.Message {
+            return bus.timedPop(clock.TIME_NONE);
+        }
+    };
 };
 
 // Sync handler function type
