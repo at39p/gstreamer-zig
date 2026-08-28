@@ -255,29 +255,23 @@ pub const Bus = struct {
     pub const Stream = struct {
         bus: Bus,
 
-        /// Awaits the next message, suspending the calling task while
-        /// GStreamer has nothing to say, so other tasks keep running. Returns
-        /// null once the bus stops delivering, e.g. it was set flushing.
-        ///
-        /// Transfer full: the caller owns the message and must `deinit` it.
-        ///
-        /// The bus itself is the queue, so no message is missed between calls.
-        /// One unit of concurrency is used per message, which is cheap for a
-        /// bus: it carries state changes, warnings and errors, not data.
-        ///
-        /// A pop already in flight cannot be interrupted - `gst_bus_timed_pop`
-        /// is a blocking call and Zig cannot cancel one - so a canceled task
-        /// observes the cancelation after the next message arrives.
+        /// Awaits the next message, suspending the calling task instead of
+        /// blocking its thread. Transfer full: the caller owns the message.
         pub fn next(self: Stream, io: Io) Io.ConcurrentError!?message.Message {
-            // `concurrent`, not `async`: `async` is allowed to run the pop
-            // inline on this thread, which would block it instead of
-            // suspending this task.
-            var pending = try io.concurrent(timedPopBlocking, .{self.bus});
+            return self.nextTimeout(io, clock.TIME_NONE);
+        }
+
+        /// Like `next`, but gives up after `timeout` the way `gst_bus_timed_pop`
+        /// does. A pop in flight cannot be interrupted, so `timeout` also bounds
+        /// how long a canceled task stays parked.
+        pub fn nextTimeout(self: Stream, io: Io, timeout: ClockTime) Io.ConcurrentError!?message.Message {
+            // `concurrent`, not `async`: async may run the pop inline and block this thread.
+            var pending = try io.concurrent(popBlocking, .{ self.bus, timeout });
             return pending.await(io);
         }
 
-        fn timedPopBlocking(bus: Bus) ?message.Message {
-            return bus.timedPop(clock.TIME_NONE);
+        fn popBlocking(bus: Bus, timeout: ClockTime) ?message.Message {
+            return bus.timedPop(timeout);
         }
     };
 };

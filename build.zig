@@ -85,6 +85,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "discoverer", .file = "discoverer.zig", .description = "Run the discoverer example" },
         .{ .name = "pad-probes", .file = "pad-probes.zig", .description = "Run the pad probes example" },
         .{ .name = "async-bus", .file = "async-bus.zig", .description = "Run the async bus example" },
+        .{ .name = "interactive", .file = "interactive-launch.zig", .description = "Run the interactive launch example" },
     };
 
     for (examples) |example| {
